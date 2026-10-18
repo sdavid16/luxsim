@@ -176,7 +176,7 @@ with st.sidebar:
         source_y = st.slider("Coordenada Y", -8.0, 8.0, 2.0, 0.5, key="source_y_2d")
         position = [source_x, source_y]
         angle_2d = st.slider("Dirección central (°)", 0, 355, 270, 5, key="angle_2d")
-        aperture = st.slider("Apertura angular (°)", 0, 100, 50, 5, key="aperture_2d")
+        aperture = st.slider("Apertura angular (°)", 0, 360, 360, 5, key="aperture_2d", help="360° distribuye los rayos en todas las direcciones del plano.")
         azimuth_3d, elevation_3d = 30, 55
     else:
         source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_3d")
@@ -185,7 +185,7 @@ with st.sidebar:
         position = [source_x, source_y, source_z]
         azimuth_3d = st.slider("Azimut (°)", 0, 355, 30, 5, key="azimuth_3d")
         elevation_3d = st.slider("Elevación (°)", -85, 85, 25, 5, key="elevation_3d")
-        aperture = st.slider("Apertura del cono (°)", 0, 140, 100, 5, key="aperture_3d")
+        aperture = st.slider("Apertura angular 3D (°)", 0, 360, 360, 5, key="aperture_3d", help="360° distribuye los rayos en todas las direcciones del espacio.")
         angle_2d = 90
 
     ray_max = MAX_RAYS
@@ -264,15 +264,11 @@ elif st.session_state.validation_error:
 else:
     rays = st.session_state.rays
     metrics = st.session_state.metrics
-    escaped = sum(ray.state == RayState.ESCAPED for ray in rays)
-    capped = sum(ray.state == RayState.MAX_BOUNCES for ray in rays)
-    absorbed = sum(ray.state == RayState.ABSORBED for ray in rays)
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3 = st.columns(3)
     c1.metric("Rayos emitidos", len(rays))
-    c2.metric("Captados", sum(ray.state == RayState.CAPTURED for ray in rays))
-    c3.metric("Escapados / absorbidos", escaped + absorbed)
-    c4.metric("Eficiencia de captación", f"{metrics.get('eficiencia_pct', 0.0):.1f}%")
-    st.caption(f"Recorridos limitados a {max_distance} unidades y {max_bounces} rebotes por rayo.")
+    c2.metric("Alcance máximo", f"{max_distance} u")
+    c3.metric("Rebotes máximos", max_bounces)
+    st.caption("Los resultados se muestran como trayectorias geométricas; no se resumen en métricas de captación o escape.")
     selected_ray_index = st.selectbox("Inspeccionar recorrido", options=list(range(len(rays))), format_func=lambda i: f"Rayo {i + 1} · {len(rays[i].history) - 1} impactos/tramos", key="selected_ray_index") if rays else 0
     if rays:
         selected_ray = rays[selected_ray_index]
