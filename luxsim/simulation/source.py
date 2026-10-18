@@ -23,10 +23,12 @@ class Source2D:
         if self.num_rays == 1:
             angles = [self.angle_center]
         else:
+            full_circle = np.isclose(self.angle_spread, 2.0 * np.pi)
             angles = np.linspace(
-                self.angle_center - self.angle_spread/2,
-                self.angle_center + self.angle_spread/2, 
-                self.num_rays
+                self.angle_center - self.angle_spread / 2.0,
+                self.angle_center + self.angle_spread / 2.0,
+                self.num_rays,
+                endpoint=not full_circle,
             )
             
         for ang in angles:
@@ -35,7 +37,7 @@ class Source2D:
         return rays
 
 class Source3D:
-    """Fuente 3D con dispersión sobre un casquete cónico."""
+    """Fuente 3D con apertura cónica; 360° distribuye rayos por toda la esfera."""
     def __init__(self, position, dir_vec, angle_spread, num_rays, total_energy, seed=None):
         self.position = np.array(position, dtype=float)
         self.dir_vec = normalize(np.array(dir_vec, dtype=float))
