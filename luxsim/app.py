@@ -146,7 +146,6 @@ def show_formulas(mode, env_id, angle_2d, azimuth_3d, elevation_3d, position, ma
 if "config_signature" not in st.session_state:
     st.session_state.update({
         "rays": [],
-        "metrics": {},
         "surfaces": [],
         "max_sim_dist": 1.0,
         "config_signature": None,
@@ -187,7 +186,7 @@ with st.sidebar:
         source_y = st.slider("Coordenada Y", -8.0, 8.0, 0.0, 0.5, key="source_y_3d")
         source_z = st.slider("Coordenada Z", -3.0, 13.0, 1.0, 0.5, key="source_z_3d")
         position = [source_x, source_y, source_z]
-        azimuth_3d = st.slider("Azimut (°)", 0, 355, 30, 5, key="azimuth_3d")
+        azimuth_3d = st.slider("Azimut (°)", 0, 360, 30, 5, key="azimuth_3d")
         elevation_3d = st.slider("Elevación (°)", -85, 85, 25, 5, key="elevation_3d")
         aperture = st.slider("Apertura angular 3D (°)", 0, 360, 100, 5, key="aperture_3d")
         angle_2d = 90
@@ -214,11 +213,10 @@ if submitted:
         try:
             scene = build_environment(env_id, mode)
             source = build_source(mode, position, angle_2d, azimuth_3d, elevation_3d, aperture, ray_count)
-            rays, metrics = run_simulation(source, scene, max_bounces, max_distance=float(max_distance))
+            rays = run_simulation(source, scene, max_bounces, max_distance=float(max_distance))
             max_dist = float(max_distance)
             st.session_state.update({
                 "rays": rays,
-                "metrics": metrics,
                 "surfaces": scene,
                 "max_sim_dist": max(max_dist, 0.01),
                 "config_signature": signature,
