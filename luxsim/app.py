@@ -20,8 +20,8 @@ st.markdown(
     <style>
       :root { --ink:#e5eefc; --muted:#9fb2cc; --line:#263750; --accent:#38bdf8; }
       .stApp { background:radial-gradient(ellipse at 70% 0%,#142b49 0%,#08111f 58%); color:var(--ink); }
-      .block-container { max-width:1700px; padding-top:1rem; padding-bottom:1.5rem; }
-      [data-testid="stSidebar"] { background:#0b1728; border-right:1px solid #233650; }
+      .block-container { max-width:1700px; padding-top:1.25rem; padding-bottom:2rem; }
+      [data-testid="stSidebar"] { background:linear-gradient(180deg,#0b1728 0%,#0a1423 100%); border-right:1px solid #233650; }
       [data-testid="stSidebar"] * { color:#dce8f8; }
       .lux-brand { display:flex; align-items:center; gap:.7rem; margin-bottom:.35rem; }
       .lux-mark { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:14px; background:linear-gradient(135deg,#06b6d4,#6366f1 55%,#a855f7); color:white; font-size:24px; font-weight:800; box-shadow:0 0 26px #06b6d455; }
@@ -29,9 +29,14 @@ st.markdown(
       .lux-subtitle { color:var(--muted); font-size:.96rem; margin:.35rem 0 1rem; }
       .lux-eyebrow { color:#67e8f9; text-transform:uppercase; letter-spacing:.16em; font-size:.7rem; font-weight:800; }
       .lux-section { font-size:1.08rem; font-weight:750; color:#e8f2ff; margin:.15rem 0; }
-      div[data-testid="stMetric"] { background:#101f33; border:1px solid #29405e; border-radius:14px; padding:10px 14px; }
+      div[data-testid="stMetric"] { background:linear-gradient(145deg,#12243a,#0e1b2d); border:1px solid #29405e; border-radius:16px; padding:12px 15px; box-shadow:0 6px 18px #02081726; }
       div[data-testid="stMetric"] label, div[data-testid="stMetric"] [data-testid="stMetricValue"] { color:#e8f2ff; }
-      .stButton > button { border-radius:11px; font-weight:700; border:1px solid #36506f; }
+      .stButton > button { min-height:2.65rem; border-radius:12px; font-weight:700; border:1px solid #36506f; transition:border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+      .stButton > button:hover { border-color:#67e8f9; box-shadow:0 4px 16px #38bdf822; transform:translateY(-1px); }
+      [data-testid="stDataFrame"], [data-testid="stTable"] { border:1px solid #263750; border-radius:14px; overflow:hidden; }
+      [data-testid="stExpander"] { border:1px solid #263750; border-radius:14px; background:#0d1a2b66; }
+      div[data-baseweb="slider"] [role="slider"] { box-shadow:0 0 0 3px #38bdf81c; }
+      .stRadio [role="radiogroup"] { gap:.45rem; }
       .stButton > button[kind="primary"] { background:linear-gradient(100deg,#0891b2,#6366f1); border:0; color:white; box-shadow:0 5px 20px #0891b233; }
       div[data-baseweb="select"] > div, div[data-baseweb="input"] > div { background:#101f33; }
       hr { border-color:#263750; }
@@ -174,8 +179,8 @@ with st.sidebar:
         source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_2d")
         source_y = st.slider("Coordenada Y", -8.0, 8.0, 2.0, 0.5, key="source_y_2d")
         position = [source_x, source_y]
-        angle_2d = st.slider("Dirección central (°)", 0, 355, 270, 5, key="angle_2d")
-        aperture = st.slider("Apertura angular (°)", 0, 360, 50, 5, key="aperture_2d", help="360° distribuye los rayos en todas las direcciones del plano.")
+        angle_2d = st.slider("Dirección central (°)", 0, 360, 270, 5, key="angle_2d")
+        aperture = st.slider("Apertura angular (°)", 0, 360, 50, 5, key="aperture_2d")
         azimuth_3d, elevation_3d = 30, 55
     else:
         source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_3d")
@@ -184,7 +189,7 @@ with st.sidebar:
         position = [source_x, source_y, source_z]
         azimuth_3d = st.slider("Azimut (°)", 0, 355, 30, 5, key="azimuth_3d")
         elevation_3d = st.slider("Elevación (°)", -85, 85, 25, 5, key="elevation_3d")
-        aperture = st.slider("Apertura angular 3D (°)", 0, 360, 100, 5, key="aperture_3d", help="360° distribuye los rayos en todas las direcciones del espacio. Aumenta el número de rayos para una cobertura más densa.")
+        aperture = st.slider("Apertura angular 3D (°)", 0, 360, 100, 5, key="aperture_3d")
         angle_2d = 90
 
     ray_max = MAX_RAYS
@@ -266,32 +271,21 @@ else:
     c1.metric("Rayos emitidos", len(rays))
     c2.metric("Alcance máximo", f"{max_distance} u")
     c3.metric("Rebotes máximos", max_bounces)
-    st.caption("Los resultados se muestran como trayectorias geométricas; no se resumen en métricas de captación o escape.")
-    selected_ray_index = st.selectbox("Inspeccionar recorrido", options=list(range(len(rays))), format_func=lambda i: f"Rayo {i + 1} · {len(rays[i].history) - 1} impactos/tramos", key="selected_ray_index") if rays else 0
+    selected_ray_index = st.selectbox("Inspeccionar recorrido", options=list(range(len(rays))), format_func=lambda i: f"Rayo {i + 1} · {len(rays[i].history) - 1} impactos", key="selected_ray_index") if rays else 0
     if rays:
         selected_ray = rays[selected_ray_index]
-        history_rows = [{"Paso": i, "X": float(item[0][0]), "Y": float(item[0][1]), **({"Z": float(item[0][2])} if len(item[0]) > 2 else {}), "Distancia acumulada": float(item[3]), "Estado": item[2].value} for i, item in enumerate(selected_ray.history)]
+        history_rows = [{"Paso": i, "X": float(item[0][0]), "Y": float(item[0][1]), **({"Z": float(item[0][2])} if len(item[0]) > 2 else {}), "Distancia acumulada": float(item[3])} for i, item in enumerate(selected_ray.history)]
         st.dataframe(history_rows, use_container_width=True, hide_index=True)
 
     @st.fragment(run_every=0.10 if st.session_state.animation_playing else None)
     def animated_scene():
-        controls = st.columns([1, 1, 2, 4])
-        if st.session_state.animation_playing:
-            if controls[0].button("Pausar", use_container_width=True):
-                st.session_state.animation_playing = False
-                st.session_state.animation_last_tick = time.monotonic()
-                st.rerun()
-        else:
-            if controls[0].button("Continuar", use_container_width=True):
-                st.session_state.animation_playing = True
-                st.session_state.animation_last_tick = time.monotonic()
-                st.rerun()
-        if controls[1].button("Reiniciar", use_container_width=True):
+        controls = st.columns([1, 2, 4])
+        if controls[0].button("Reiniciar", use_container_width=True):
             st.session_state.animation_progress = 0.0
             st.session_state.animation_last_tick = time.monotonic()
             st.session_state.animation_playing = True
             st.rerun()
-        speed = controls[2].slider(
+        speed = controls[1].slider(
             "Velocidad",
             min_value=0.5,
             max_value=20.0,
@@ -299,7 +293,7 @@ else:
             step=0.5,
             key="animation_speed_fragment",
         )
-        controls[3].caption(f"Velocidad de propagación: {speed:.1f} unidades/s")
+        controls[2].caption(f"Velocidad de propagación: {speed:.1f} unidades/s")
 
         if st.session_state.animation_playing:
             now = time.monotonic()
