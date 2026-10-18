@@ -1,5 +1,6 @@
 import time
 
+import numpy as np
 import streamlit as st
 from core.ray import RayState
 from environments.scenes import EnvironmentLibrary
@@ -9,7 +10,7 @@ from visualization.plotter import plot_scene
 
 
 st.set_page_config(
-    page_title="LUXSIM | Geometría de rayos",
+    page_title="LUXSIM | Trazado de rayos",
     page_icon="✦",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -39,26 +40,20 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Escenas deliberadamente limitadas a las geometrías más útiles para el curso.
-ENVIRONMENTS_2D = {
-    "A": "Circunferencia",
-    "B": "Rectángulo",
-    "C": "Elipse",
-}
-ENVIRONMENTS_3D = {
-    "A": "Cilindro",
-    "C": "Elipsoide",
-}
+ENVIRONMENTS_2D = {"A": "Circunferencia", "B": "Rectángulo", "C": "Elipse"}
+ENVIRONMENTS_3D = {"A": "Cilindro", "B": "Esfera", "C": "Elipsoide"}
 RAYS_2D = 7
 RAYS_3D = 19
 MAX_BOUNCES = 12
 
 
 def build_environment(env_id, mode):
-    """Escenas ideales: paredes perfectamente reflectantes y receptor definido."""
     if mode == "3D":
         if env_id == "A":
             return EnvironmentLibrary.get_env_A_cylindrical(5, 10, 1.0, 8)
+        if env_id == "B":
+            # Una esfera es un elipsoide con los tres semiejes iguales.
+            return EnvironmentLibrary.get_env_C_ellipsoid(5, 5, 5, 1.0, 2)
         if env_id == "C":
             return EnvironmentLibrary.get_env_C_ellipsoid(6, 4, 8, 1.0, 2)
     else:
@@ -71,58 +66,59 @@ def build_environment(env_id, mode):
     raise ValueError("La escena seleccionada no está disponible en esta dimensión.")
 
 
-def build_source(env_id, mode, angle, aperture):
-    """Cantidad de rayos fija; los únicos parámetros son geométricos."""
-    if mode == "3D":
-        # Eje oblicuo y apertura amplia para hacer visible la dispersión XYZ.
-        direction = [0.48, 0.24, 0.84] if env_id == "A" else [0.42, 0.28, 0.86]
-        position = [0, 0, 1] if env_id == "A" else [0, 0, 0]
-        return Source3D(position, direction, aperture, RAYS_3D, 1000.0)
+def build_source(mode, position, angle_2d, azimuth_3d, elevation_3d, aperture):
+    if mode == "2D":
+        return Source2D(position[:2], angle_2d, aperture, RAYS_2D, 1000.0)
 
-    presets = {
-        "A": ([0, -2], 90),
-        "B": ([0, -2], 90),
-        "C": ([0, -1.5], 90),
-    }
-    position, default_angle = presets[env_id]
-    center_angle = default_angle if angle is None else angle
-    return Source2D(position, center_angle, aperture, RAYS_2D, 1000.0)
+    azimuth = np.radians(azimuth_3d)
+    elevation = np.radians(elevation_3d)
+    direction = [
+        np.cos(elevation) * np.cos(azimuth),
+        np.cos(elevation) * np.sin(azimuth),
+        np.sin(elevation),
+    ]
+    return Source3D(position[:3], direction, aperture, RAYS_3D, 1000.0)
 
 
 FORMULAS = {
     ("2D", "A"): [
-        ("Circunferencia (lugar geométrico)", r"(x-h)^2+(y-k)^2=r^2"),
-        ("Recta que representa cada rayo", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq 0"),
+        ("Circunferencia", r"(x-h)^2+(y-k)^2=r^2"),
     ],
     ("2D", "B"): [
-        ("Lados del rectángulo", r"\mathbf{p}(u)=\mathbf{a}+u(\mathbf{b}-\mathbf{a}),\quad 0\leq u\leq 1"),
+        ("Lados del rectángulo como segmentos", r"\mathbf{p}(u)=\mathbf{a}+u(\mathbf{b}-\mathbf{a}),\quad 0\leq u\leq1"),
         ("Intersección recta-segmento", r"\mathbf{p}_0+t\mathbf{d}=\mathbf{a}+u(\mathbf{b}-\mathbf{a})"),
     ],
     ("2D", "C"): [
-        ("Elipse (lugar geométrico)", r"\frac{(x-h)^2}{a^2}+\frac{(y-k)^2}{b^2}=1"),
-        ("Recta que representa cada rayo", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq 0"),
+        ("Elipse", r"\frac{(x-h)^2}{a^2}+\frac{(y-k)^2}{b^2}=1"),
     ],
     ("3D", "A"): [
         ("Superficie cilíndrica", r"(x-h)^2+(y-k)^2=r^2"),
-        ("Intervalo de altura", r"z_{\min}\leq z\leq z_{\max}"),
-        ("Recta en el espacio", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq 0"),
+        ("Límites de altura", r"z_{\min}\leq z\leq z_{\max}"),
+    ],
+    ("3D", "B"): [
+        ("Esfera", r"(x-h)^2+(y-k)^2+(z-l)^2=r^2"),
     ],
     ("3D", "C"): [
         ("Elipsoide", r"\frac{(x-h)^2}{a^2}+\frac{(y-k)^2}{b^2}+\frac{(z-l)^2}{c^2}=1"),
-        ("Recta en el espacio", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq 0"),
     ],
 }
 
 
 def show_formulas(mode, env_id):
-    st.markdown("**Fórmulas usadas en esta escena**")
     for label, formula in FORMULAS[(mode, env_id)]:
         st.caption(label)
         st.latex(formula)
-    st.caption("Intersección: se sustituye la ecuación del rayo en la de la superficie y se elige el primer impacto válido (t > 0).")
-    st.latex(r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d}")
-    st.caption("Reflexión ideal en una superficie con normal unitaria n.")
-    st.latex(r"\mathbf{d}'=\mathbf{d}-2(\mathbf{d}\cdot\mathbf{n})\mathbf{n}")
+    if mode == "2D":
+        st.caption("Vector de dirección, definido por el ángulo θ:")
+        st.latex(r"\mathbf{d}=(\cos\theta,\sin\theta)")
+        st.caption("Ecuación vectorial de la recta:")
+        st.latex(r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq0")
+    else:
+        st.caption("Vector de dirección, con azimut θ y elevación φ:")
+        st.latex(r"\mathbf{d}=(\cos\varphi\cos\theta,\cos\varphi\sin\theta,\sin\varphi)")
+        st.caption("Ecuación vectorial de la recta en el espacio:")
+        st.latex(r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq0")
+    st.caption("Intersección: se sustituye la recta en la ecuación de la superficie y se conserva el primer impacto con t > 0.")
 
 
 if "rays" not in st.session_state:
@@ -143,48 +139,50 @@ with st.sidebar:
         '<div class="lux-brand"><div class="lux-mark">✦</div><div><div class="lux-eyebrow">Laboratorio geométrico</div><div style="font-size:1.2rem;font-weight:800;color:#17283f;">LUXSIM</div></div></div>',
         unsafe_allow_html=True,
     )
-    st.caption("Rectas, lugares geométricos e intersecciones")
     st.divider()
-    st.markdown("**1 · Escena geométrica**")
+    st.markdown("**1 · Escena**")
     mode = st.radio("Dimensión", ["2D", "3D"], horizontal=True, key="ui_mode")
     options = ENVIRONMENTS_2D if mode == "2D" else ENVIRONMENTS_3D
-    env_id = st.selectbox(
-        "Superficie",
-        list(options),
-        format_func=lambda key: options[key],
-        key=f"scene_{mode}",
-    )
+    env_id = st.selectbox("Superficie", list(options), format_func=lambda key: options[key], key=f"scene_{mode}")
 
+    st.markdown("**2 · Punto de emisión**")
     if mode == "2D":
-        with st.expander("2 · Dirección del haz", expanded=True):
-            angle = st.slider("Dirección central (°)", 0, 360, 90, 5)
-            aperture = st.slider("Apertura angular (°)", 0, 100, 50, 5)
+        source_x = st.slider("Coordenada X", -4.5, 4.5, 0.0, 0.5, key="source_x_2d")
+        default_y = -1.5 if env_id == "C" else -2.0
+        source_y = st.slider("Coordenada Y", -4.5, 4.5, default_y, 0.5, key="source_y_2d")
+        position = [source_x, source_y]
+        angle_2d = st.slider("Dirección central (°)", 0, 355, 90, 5, key="angle_2d")
+        aperture = st.slider("Apertura angular (°)", 0, 100, 50, 5, key="aperture_2d")
+        azimuth_3d, elevation_3d = 30, 55
         ray_count = RAYS_2D
     else:
-        angle = None
-        with st.expander("2 · Dirección del haz", expanded=True):
-            aperture = st.slider("Apertura del cono (°)", 20, 140, 100, 5)
-            st.caption("El eje está inclinado y los rayos se distribuyen en el espacio XYZ.")
+        source_x = st.slider("Coordenada X", -4.0, 4.0, 0.0, 0.5, key="source_x_3d")
+        source_y = st.slider("Coordenada Y", -4.0, 4.0, 0.0, 0.5, key="source_y_3d")
+        default_z = 1.0 if env_id == "A" else 0.0
+        source_z = st.slider("Coordenada Z", -4.0, 9.0, default_z, 0.5, key="source_z_3d")
+        position = [source_x, source_y, source_z]
+        azimuth_3d = st.slider("Azimut (°)", 0, 355, 30, 5, key="azimuth_3d")
+        elevation_3d = st.slider("Elevación (°)", -85, 85, 55, 5, key="elevation_3d")
+        aperture = st.slider("Apertura del cono (°)", 0, 140, 100, 5, key="aperture_3d")
+        angle_2d = 90
         ray_count = RAYS_3D
 
-    st.caption(f"Rayos por escena: **{ray_count}** (cantidad fija).")
-    st.caption("Se usa reflexión ideal: no hay refracción ni controles de reflectividad.")
+    st.markdown("**3 · Recorrido**")
     speed = st.slider(
-        "Velocidad de animación (unidades geométricas/s)",
-        min_value=0.5,
-        max_value=20.0,
-        value=5.0,
-        step=0.5,
-        help="Controla la velocidad visual del recorrido, no una velocidad física de la luz.",
+        "Velocidad (unidades geométricas/s)",
+        min_value=0.5, max_value=20.0, value=5.0, step=0.5,
+        help="Controla la velocidad visual del recorrido.",
         key="animation_speed",
     )
     run_clicked = st.button("Iniciar simulación", type="primary", use_container_width=True)
 
-signature = (mode, env_id, angle, aperture)
+signature = (
+    mode, env_id, tuple(position), angle_2d, azimuth_3d, elevation_3d, aperture,
+)
 if run_clicked:
     try:
         scene = build_environment(env_id, mode)
-        source = build_source(env_id, mode, angle, aperture)
+        source = build_source(mode, position, angle_2d, azimuth_3d, elevation_3d, aperture)
         rays, metrics = run_simulation(source, scene, MAX_BOUNCES)
         max_dist = max((float(ray.cumulative_distance) for ray in rays), default=1.0)
         st.session_state.update({
@@ -206,18 +204,18 @@ current = st.session_state.calc_done and st.session_state.config_signature == si
 st.markdown(
     '<div class="lux-eyebrow">Geometría analítica aplicada a óptica</div>'
     '<div class="lux-title">LUXSIM <span style="color:#0f766e;">/</span> Trazado de rayos</div>'
-    '<div class="lux-subtitle">Observa cómo una recta intersecta una superficie y cómo cambia su dirección al reflejarse. La geometría es el centro de la simulación.</div>',
+    '<div class="lux-subtitle">Explora las trayectorias a partir de la posición de emisión, su dirección y la superficie seleccionada.</div>',
     unsafe_allow_html=True,
 )
 
 if not current:
-    st.info("Elige una superficie y pulsa **Iniciar simulación**. El recorrido comenzará automáticamente con la velocidad indicada.")
-elif current:
+    st.info("Selecciona una superficie, ajusta la fuente y pulsa **Iniciar simulación**.")
+else:
     rays = st.session_state.rays
     metrics = st.session_state.metrics
     captured = sum(ray.state == RayState.CAPTURED for ray in rays)
     c1, c2, c3 = st.columns(3)
-    c1.metric("Rayos trazados", f"{len(rays)}", "cantidad fija")
+    c1.metric("Rayos trazados", f"{len(rays)}")
     c2.metric("Impactos en receptor", f"{captured}")
     c3.metric("Rebotes promedio", f"{metrics['rebotes_medios']:.1f}")
 
@@ -236,11 +234,11 @@ elif current:
         st.session_state.animation_last_tick = time.monotonic()
         st.session_state.animation_playing = True
         st.rerun()
-    controls[2].caption(f"Velocidad: {speed:.1f} unidades geométricas/s · el control de velocidad está en el panel lateral.")
+    controls[2].caption(f"Velocidad: {speed:.1f} unidades geométricas/s")
 
     max_dist = float(st.session_state.max_sim_dist)
 
-    @st.fragment(run_every=0.1 if st.session_state.animation_playing else None)
+    @st.fragment(run_every=0.05 if st.session_state.animation_playing else None)
     def animated_scene():
         if st.session_state.animation_playing:
             now = time.monotonic()
@@ -257,12 +255,7 @@ elif current:
             reached_end = False
 
         progress = float(st.session_state.animation_progress)
-        scene_title = options[env_id]
-        st.markdown(
-            f'<div class="lux-section">{scene_title} · vista {mode}</div>'
-            '<div class="lux-muted">La escena se dibuja a partir de las superficies y los historiales de intersección del motor.</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(f'<div class="lux-section">{options[env_id]} · vista {mode}</div>', unsafe_allow_html=True)
         fig = plot_scene(
             st.session_state.surfaces,
             st.session_state.rays,
@@ -274,20 +267,19 @@ elif current:
             use_container_width=True,
             config={"displaylogo": False, "scrollZoom": True, "responsive": True},
         )
-        st.caption(f"Recorrido visual: {progress:.1f} / {max_dist:.1f} unidades geométricas")
+        st.caption(f"Recorrido: {progress:.1f} / {max_dist:.1f} unidades geométricas")
         if reached_end:
             st.rerun()
 
     animated_scene()
 
-    with st.expander("¿Qué fórmulas aparecen aquí y para qué sirven?", expanded=False):
+    with st.expander("Fórmulas de la escena", expanded=True):
         show_formulas(mode, env_id)
 
-    with st.expander("Cómo leer la escena", expanded=False):
+    with st.expander("Elementos de la visualización", expanded=False):
         st.markdown(
-            "- **Fuente (rombo ámbar):** punto desde el que salen los rayos.\n"
-            "- **Superficie gris:** circunferencia, segmentos, cilindro o elipsoide donde se calculan intersecciones.\n"
-            "- **Receptor verde:** segmento o disco que registra los rayos que llegan.\n"
-            "- **Rayos:** cada tramo se dibuja desde un punto de origen hasta el siguiente impacto calculado.\n"
-            "- **Ejes X, Y, Z:** permiten comprobar la posición y la dirección espacial en 3D."
+            "- **Fuente:** punto desde el que se emiten los rayos.\n"
+            "- **Superficie:** circunferencia, segmentos, cilindro, esfera o elipsoide.\n"
+            "- **Receptor:** superficie que registra los rayos que llegan.\n"
+            "- **Ejes X, Y, Z:** referencia espacial en la vista 3D."
         )
