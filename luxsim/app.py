@@ -2,7 +2,6 @@ import time
 
 import numpy as np
 import streamlit as st
-from core.ray import RayState
 from core.surfaces import Segment2D, SurfaceType
 from environments.scenes import EnvironmentLibrary
 from simulation.engine import run_simulation
@@ -263,7 +262,6 @@ elif st.session_state.validation_error:
     )
 else:
     rays = st.session_state.rays
-    metrics = st.session_state.metrics
     c1, c2, c3 = st.columns(3)
     c1.metric("Rayos emitidos", len(rays))
     c2.metric("Alcance máximo", f"{max_distance} u")
