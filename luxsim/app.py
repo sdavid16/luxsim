@@ -200,7 +200,7 @@ signature = (mode, env_id, source_region, tuple(position), angle_2d, azimuth_3d,
 inside = is_inside_figure(env_id, mode, position)
 placement_ok = (mode == "2D" and env_id == "C") or (inside if source_region == "Dentro de la figura" else not inside)
 
-# El trazado solo se recalcula cuando se envía el formulario.
+# Los parámetros se previsualizan en cada cambio; el trazado analítico corre al pulsar el botón.
 if submitted:
     if placement_ok:
         try:
