@@ -2,6 +2,3 @@
 numpy>=1.24,<3.0
 streamlit>=1.37.0
 plotly>=5.17.0
-
-# Dependencia para ejecutar la suite de pruebas
-pytest>=7.0.0
