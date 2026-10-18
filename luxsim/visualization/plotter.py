@@ -74,7 +74,7 @@ def _add_2d_surface(fig, surf):
             x=[surf.p1[0], surf.p2[0]], y=[surf.p1[1], surf.p2[1]],
             mode="lines", name=label,
             line=dict(color=color, width=5 if surf.type == "RECEPTOR" else 2.5),
-            hovertemplate=f"{label}<extra></extra>",
+            hovertemplate=f"{label}<extra></extra>", showlegend=False,
         ))
     elif name == "Circle2D":
         theta = np.linspace(0, 2 * np.pi, 240)
@@ -83,7 +83,7 @@ def _add_2d_surface(fig, surf):
         fig.add_trace(go.Scatter(
             x=x, y=y, mode="lines", name=label,
             line=dict(color=color, width=2.5),
-            fill="toself", fillcolor=WALL_FILL,
+            fill="toself", fillcolor=WALL_FILL, showlegend=False,
             hovertemplate=f"{label}<extra></extra>",
         ))
     elif name == "Ellipse2D":
@@ -221,10 +221,16 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf")):
     ]
     for surf_type, color, label in legend_items:
         if surf_type in present_types:
-            fig.add_trace(go.Scatter(
-                x=[None], y=[None], mode="lines", name=label,
-                line=dict(color=color, width=4), showlegend=True,
-            ))
+            if is_3d:
+                fig.add_trace(go.Scatter3d(
+                    x=[None], y=[None], z=[None], mode="lines", name=label,
+                    line=dict(color=color, width=4), showlegend=True,
+                ))
+            else:
+                fig.add_trace(go.Scatter(
+                    x=[None], y=[None], mode="lines", name=label,
+                    line=dict(color=color, width=4), showlegend=True,
+                ))
 
     base_layout = dict(
         template="plotly_white",
