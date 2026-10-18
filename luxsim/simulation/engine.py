@@ -1,7 +1,18 @@
+"""Orquestación del trazado y cálculo de métricas de energía de LUXSIM."""
+
 from core.intersections import trace_ray
 from core.ray import RayState
 
 def run_simulation(source, surfaces, max_bounces=50, epsilon=1e-7, max_distance=40.0):
+    """Genera los rayos, traza sus rebotes y devuelve historiales y métricas.
+
+    Args:
+        source: fuente 2D o 3D con ``generate_rays`` y ``total_energy``.
+        surfaces: superficies analíticas que pueden intersectar los rayos.
+        max_bounces: límite de reflexiones por rayo.
+        epsilon: tolerancia numérica para intersecciones cercanas.
+        max_distance: longitud total máxima recorrida por cada rayo.
+    """
     rays = source.generate_rays()
     
     for ray in rays:
