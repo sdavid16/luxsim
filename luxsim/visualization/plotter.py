@@ -5,19 +5,20 @@ from core.ray import RayState
 
 # Paleta semántica coherente entre escenas y dimensiones.
 INK = "#24364b"
-GRID = "#e8eef5"
-WALL = "#8292a8"
-WALL_FILL = "rgba(148,163,184,0.12)"
-RECEIVER = "#0f9b8e"
-ESCAPE = "#f59e0b"
-RAY_ACTIVE = "#e6a817"
-LASER_GREEN = "#16a34a"
-FLASHLIGHT_YELLOW = "#eab308"
-APERTURE_RED = "#ef4444"
-RAY_CAPTURED = "#0f9b8e"
-RAY_ABSORBED = "#e05252"
+GRID = "#243b59"
+WALL = "#a5b4fc"
+WALL_FILL = "rgba(129,140,248,0.13)"
+RECEIVER = "#2dd4bf"
+ESCAPE = "#fb923c"
+RAY_ACTIVE = "#facc15"
+LASER_GREEN = "#4ade80"
+FLASHLIGHT_YELLOW = "#facc15"
+FLASHLIGHT_PALETTE = ["#facc15", "#22d3ee", "#fb7185", "#a78bfa", "#4ade80", "#fb923c", "#60a5fa", "#f472b6", "#bef264", "#e879f9"]
+APERTURE_RED = "#fb7185"
+RAY_CAPTURED = "#2dd4bf"
+RAY_ABSORBED = "#fb7185"
 RAY_ESCAPED = "#94a3b8"
-RAY_LIMIT = "#8b5cf6"
+RAY_LIMIT = "#c084fc"
 
 
 def get_color(state):
@@ -65,7 +66,14 @@ def _surface_color(surf):
         return RECEIVER
     if surf.type == "ABERTURA":
         return ESCAPE
-    return WALL
+    return {
+        "Circle2D": "#22d3ee",
+        "Ellipse2D": "#a78bfa",
+        "Segment2D": "#f472b6",
+        "CylinderWall3D": "#22d3ee",
+        "Disk3D": "#818cf8",
+        "Ellipsoid3D": "#a78bfa",
+    }.get(type(surf).__name__, WALL)
 
 
 def _add_2d_surface(fig, surf):
@@ -114,7 +122,7 @@ def _add_3d_surface(fig, surf):
         y = surf.cb[1] + surf.r * np.sin(th)
         fig.add_trace(go.Surface(
             x=x, y=y, z=zz, name=label, showscale=False,
-            opacity=0.17, colorscale=[[0, color], [1, color]],
+            opacity=0.30, colorscale=[[0, "#0e7490"], [0.45, color], [1, "#67e8f9"]],
             hovertemplate=f"{label}<extra></extra>",
             lighting=dict(ambient=0.8, diffuse=0.35, specular=0.12, roughness=0.9),
         ))
@@ -131,7 +139,7 @@ def _add_3d_surface(fig, surf):
         xyz = center[:, None, None] + u[:, None, None] * (rr * np.cos(tt))[None, :, :] + v[:, None, None] * (rr * np.sin(tt))[None, :, :]
         fig.add_trace(go.Surface(
             x=xyz[0], y=xyz[1], z=xyz[2], name=label, showscale=False,
-            opacity=0.78 if surf.type == "RECEPTOR" else 0.12,
+            opacity=0.52 if surf.type == "RECEPTOR" else 0.25,
             colorscale=[[0, color], [1, color]],
             hovertemplate=f"{label}<extra></extra>",
         ))
@@ -142,7 +150,7 @@ def _add_3d_surface(fig, surf):
         fig.add_trace(go.Mesh3d(
             x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2],
             i=ii, j=jj, k=kk, name="Cara plana", showscale=False,
-            opacity=0.22, color=color, flatshading=True,
+            opacity=0.34, color=color, flatshading=True,
             hovertemplate="Cara plana<extra></extra>",
         ))
         closed = np.vstack([vertices, vertices[0]])
@@ -160,7 +168,7 @@ def _add_3d_surface(fig, surf):
         z = surf.center[2] + surf.rz * np.cos(vv)
         fig.add_trace(go.Surface(
             x=x, y=y, z=z, name="Esfera" if np.isclose(surf.rx, surf.ry) and np.isclose(surf.ry, surf.rz) else label,
-            showscale=False, opacity=0.16, colorscale=[[0, color], [1, color]],
+            showscale=False, opacity=0.30, colorscale=[[0, "#4338ca"], [0.5, color], [1, "#67e8f9"]],
             hovertemplate=f"{label}<extra></extra>",
             lighting=dict(ambient=0.8, diffuse=0.4, specular=0.1, roughness=0.9),
         ))
@@ -176,34 +184,29 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_p
         else:
             _add_2d_surface(fig, surf)
 
-    grouped = {}
-    for ray in rays:
+    for ray_index, ray in enumerate(rays):
         pts = interpolate_ray_history(ray.history, max_time_dist)
         if len(pts) < 2:
             continue
-        color = LASER_GREEN if ray_count == 1 else FLASHLIGHT_YELLOW
-        label = "Láser" if ray_count == 1 else "Linterna"
-        grouped.setdefault((color, label), []).append(pts)
-
-    for (color, label), paths in grouped.items():
+        if ray_count == 1:
+            color = LASER_GREEN
+            label = "Láser"
+        else:
+            color = FLASHLIGHT_PALETTE[ray_index % len(FLASHLIGHT_PALETTE)]
+            label = "Linterna"
         if is_3d:
-            xs, ys, zs = [], [], []
-            for pts in paths:
-                xs.extend(pts[:, 0].tolist() + [None])
-                ys.extend(pts[:, 1].tolist() + [None])
-                zs.extend(pts[:, 2].tolist() + [None])
             fig.add_trace(go.Scatter3d(
-                x=xs, y=ys, z=zs, mode="lines", name=label,
-                line=dict(color=color, width=3), hoverinfo="skip", connectgaps=False,
+                x=pts[:, 0], y=pts[:, 1], z=pts[:, 2], mode="lines",
+                name=label, legendgroup=label, showlegend=(ray_index == 0),
+                line=dict(color=color, width=5 if ray_count == 1 else 4),
+                hoverinfo="skip",
             ))
         else:
-            xs, ys = [], []
-            for pts in paths:
-                xs.extend(pts[:, 0].tolist() + [None])
-                ys.extend(pts[:, 1].tolist() + [None])
             fig.add_trace(go.Scatter(
-                x=xs, y=ys, mode="lines", name=label,
-                line=dict(color=color, width=1.6), hoverinfo="skip", connectgaps=False,
+                x=pts[:, 0], y=pts[:, 1], mode="lines",
+                name=label, legendgroup=label, showlegend=(ray_index == 0),
+                line=dict(color=color, width=3.2 if ray_count == 1 else 2.4),
+                hoverinfo="skip",
             ))
 
     origins = [np.asarray(ray.history[0][0], dtype=float) for ray in rays if ray.history]
@@ -298,18 +301,18 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_p
                 ))
 
     base_layout = dict(
-        template="plotly_white",
+        template="plotly_dark",
         height=650 if is_3d else 610,
         margin=dict(l=12, r=12, t=42, b=12),
-        paper_bgcolor="#ffffff",
-        plot_bgcolor="#fbfdff",
-        font=dict(family="Inter, Segoe UI, sans-serif", color=INK, size=12),
+        paper_bgcolor="#08111f",
+        plot_bgcolor="#0b1728",
+        font=dict(family="Inter, Segoe UI, sans-serif", color="#e5eefc", size=12),
         legend=dict(
             orientation="h", yanchor="bottom", y=1.02,
-            xanchor="left", x=0, bgcolor="rgba(255,255,255,0.82)",
+            xanchor="left", x=0, bgcolor="rgba(11,23,40,0.88)",
             borderwidth=0, font=dict(size=11),
         ),
-        hoverlabel=dict(bgcolor="#ffffff", bordercolor="#dbe4ee", font_color=INK),
+        hoverlabel=dict(bgcolor="#101f33", bordercolor="#38bdf8", font_color="#e5eefc"),
         uirevision="luxsim-scene",
     )
 
@@ -317,18 +320,18 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_p
         fig.update_layout(
             **base_layout,
             scene=dict(
-                bgcolor="#fbfdff",
+                bgcolor="#0b1728",
                 aspectmode="data",
-                xaxis=dict(title="X", backgroundcolor="#f8fafc", gridcolor=GRID, zerolinecolor="#cbd5e1"),
-                yaxis=dict(title="Y", backgroundcolor="#f8fafc", gridcolor=GRID, zerolinecolor="#cbd5e1"),
-                zaxis=dict(title="Z", backgroundcolor="#f8fafc", gridcolor=GRID, zerolinecolor="#cbd5e1"),
-                camera=dict(eye=dict(x=1.55, y=1.55, z=1.15)),
+                xaxis=dict(title="X", backgroundcolor="#0b1728", gridcolor=GRID, zerolinecolor="#64748b", showbackground=True),
+                yaxis=dict(title="Y", backgroundcolor="#0b1728", gridcolor=GRID, zerolinecolor="#64748b", showbackground=True),
+                zaxis=dict(title="Z", backgroundcolor="#0b1728", gridcolor=GRID, zerolinecolor="#64748b", showbackground=True),
+                camera=dict(eye=dict(x=1.65, y=1.75, z=1.35)),
             ),
         )
     else:
         fig.update_layout(
             **base_layout,
-            xaxis=dict(title="X", showgrid=True, gridcolor=GRID, zerolinecolor="#cbd5e1", showline=True, linecolor="#cbd5e1"),
-            yaxis=dict(title="Y", showgrid=True, gridcolor=GRID, zerolinecolor="#cbd5e1", showline=True, linecolor="#cbd5e1", scaleanchor="x", scaleratio=1),
+            xaxis=dict(title="X", showgrid=True, gridcolor=GRID, zerolinecolor="#64748b", showline=True, linecolor="#36506f"),
+            yaxis=dict(title="Y", showgrid=True, gridcolor=GRID, zerolinecolor="#64748b", showline=True, linecolor="#36506f", scaleanchor="x", scaleratio=1),
         )
     return fig
