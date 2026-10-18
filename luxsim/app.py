@@ -83,7 +83,6 @@ def build_source(mode, position, angle_2d, azimuth_3d, elevation_3d, aperture):
 FORMULAS = {
     ("2D", "A"): [
         ("Circunferencia", r"(x-h)^2+(y-k)^2=r^2"),
-        ("Recta del rayo", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq0"),
     ],
     ("2D", "B"): [
         ("Lados del rectángulo como segmentos", r"\mathbf{p}(u)=\mathbf{a}+u(\mathbf{b}-\mathbf{a}),\quad 0\leq u\leq1"),
@@ -91,20 +90,16 @@ FORMULAS = {
     ],
     ("2D", "C"): [
         ("Elipse", r"\frac{(x-h)^2}{a^2}+\frac{(y-k)^2}{b^2}=1"),
-        ("Recta del rayo", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq0"),
     ],
     ("3D", "A"): [
         ("Superficie cilíndrica", r"(x-h)^2+(y-k)^2=r^2"),
         ("Límites de altura", r"z_{\min}\leq z\leq z_{\max}"),
-        ("Recta en el espacio", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq0"),
     ],
     ("3D", "B"): [
         ("Esfera", r"(x-h)^2+(y-k)^2+(z-l)^2=r^2"),
-        ("Recta en el espacio", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq0"),
     ],
     ("3D", "C"): [
         ("Elipsoide", r"\frac{(x-h)^2}{a^2}+\frac{(y-k)^2}{b^2}+\frac{(z-l)^2}{c^2}=1"),
-        ("Recta en el espacio", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq0"),
     ],
 }
 
@@ -113,10 +108,17 @@ def show_formulas(mode, env_id):
     for label, formula in FORMULAS[(mode, env_id)]:
         st.caption(label)
         st.latex(formula)
-    st.caption("Intersección: se sustituye la ecuación paramétrica de la recta en la ecuación de la superficie y se conserva el primer impacto con t > 0.")
-    st.latex(r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d}")
-    st.caption("Reflexión especular con normal unitaria n:")
-    st.latex(r"\mathbf{d}'=\mathbf{d}-2(\mathbf{d}\cdot\mathbf{n})\mathbf{n}")
+    if mode == "2D":
+        st.caption("Vector de dirección, definido por el ángulo θ:")
+        st.latex(r"\mathbf{d}=(\cos\theta,\sin\theta)")
+        st.caption("Ecuación vectorial de la recta:")
+        st.latex(r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq0")
+    else:
+        st.caption("Vector de dirección, con azimut θ y elevación φ:")
+        st.latex(r"\mathbf{d}=(\cos\varphi\cos\theta,\cos\varphi\sin\theta,\sin\varphi)")
+        st.caption("Ecuación vectorial de la recta en el espacio:")
+        st.latex(r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq0")
+    st.caption("Intersección: se sustituye la recta en la ecuación de la superficie y se conserva el primer impacto con t > 0.")
 
 
 if "rays" not in st.session_state:
