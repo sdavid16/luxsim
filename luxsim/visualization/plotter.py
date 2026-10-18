@@ -148,7 +148,7 @@ def _add_3d_surface(fig, surf):
         ))
 
 
-def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf")):
+def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_position=None):
     """Dibuja las geometrías y los historiales reales de los rayos."""
     fig = go.Figure()
 
@@ -195,22 +195,24 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf")):
             ))
 
     origins = [np.asarray(ray.history[0][0], dtype=float) for ray in rays if ray.history]
-    if origins:
-        origin = origins[0]
+    origin = origins[0] if origins else (
+        np.asarray(source_position, dtype=float) if source_position is not None else None
+    )
+    if origin is not None:
         if is_3d and len(origin) >= 3:
             fig.add_trace(go.Scatter3d(
                 x=[origin[0]], y=[origin[1]], z=[origin[2]],
                 mode="markers", name="Fuente",
                 marker=dict(size=6, color="#f59e0b", symbol="diamond",
                             line=dict(color="#ffffff", width=1)),
-                hovertemplate="Fuente luminosa<extra></extra>",
+                hovertemplate="Fuente<extra></extra>",
             ))
         elif not is_3d:
             fig.add_trace(go.Scatter(
                 x=[origin[0]], y=[origin[1]], mode="markers", name="Fuente",
                 marker=dict(size=11, color="#f59e0b", symbol="diamond",
                             line=dict(color="#ffffff", width=1.5)),
-                hovertemplate="Fuente luminosa<extra></extra>",
+                hovertemplate="Fuente<extra></extra>",
             ))
 
     present_types = {surf.type for surf in surfaces}
