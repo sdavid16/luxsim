@@ -53,6 +53,16 @@ def interpolate_ray_history(history, max_dist):
     return np.asarray(pts, dtype=float)
 
 
+def _preview_distance(origin, direction, surfaces, limit):
+    """Distancia de la vista previa hasta el primer impacto, sin atravesar la figura."""
+    nearest = float(limit)
+    for surface in surfaces:
+        hit = surface.intersect(np.asarray(origin, dtype=float), np.asarray(direction, dtype=float), 1e-7)
+        if hit is not None and 1e-7 < hit[0] < nearest:
+            nearest = float(hit[0])
+    return nearest
+
+
 def _surface_label(surf):
     if surf.type == "RECEPTOR":
         return "Receptor"
@@ -243,6 +253,61 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_p
     )
     # No se dibuja una guía recta hasta el alcance máximo: los rayos visibles
     # proceden exclusivamente de sus historiales de intersección y rebote.
+    if origin is not None and not rays:
+        # Vista previa reactiva: muestra la dirección y termina en el primer impacto.
+        if not is_3d and beam_direction is not None:
+            center = np.asarray(beam_direction, dtype=float)
+            center /= max(np.linalg.norm(center), 1e-12)
+            center_angle = np.arctan2(center[1], center[0])
+            angles = [center_angle] if ray_count == 1 else np.linspace(
+                center_angle - np.radians(aperture_degrees) / 2,
+                center_angle + np.radians(aperture_degrees) / 2,
+                ray_count,
+            )
+            for index, angle in enumerate(angles):
+                direction = np.array([np.cos(angle), np.sin(angle)])
+                distance = _preview_distance(origin[:2], direction, surfaces, float(beam_length))
+                endpoint = origin[:2] + distance * direction
+                color = LASER_GREEN if ray_count == 1 else FLASHLIGHT_PALETTE[index % len(FLASHLIGHT_PALETTE)]
+                fig.add_trace(go.Scatter(
+                    x=[origin[0], endpoint[0]], y=[origin[1], endpoint[1]],
+                    mode="lines", line=dict(color=color, width=3 if ray_count == 1 else 1.8),
+                    name="Vista previa del rayo", showlegend=False, hoverinfo="skip",
+                ))
+        elif is_3d and beam_direction_3d is not None:
+            direction = np.asarray(beam_direction_3d, dtype=float)
+            direction /= max(np.linalg.norm(direction), 1e-12)
+            half_angle = np.radians(float(aperture_degrees)) / 2.0
+            reference = np.array([0.0, 0.0, 1.0]) if abs(direction[2]) < 0.9 else np.array([1.0, 0.0, 0.0])
+            u = np.cross(direction, reference)
+            u /= max(np.linalg.norm(u), 1e-12)
+            v = np.cross(direction, u)
+            phi = np.linspace(0.0, 2.0 * np.pi, 32)
+            longitudinal = np.linspace(0.0, 1.0, 12)
+            ring_directions = [
+                np.cos(half_angle) * direction + np.sin(half_angle) * (np.cos(angle) * u + np.sin(angle) * v)
+                for angle in phi
+            ]
+            lengths = np.array([_preview_distance(origin[:3], edge, surfaces, float(beam_length)) for edge in ring_directions])
+            xx = np.empty((len(longitudinal), len(phi)))
+            yy = np.empty_like(xx)
+            zz = np.empty_like(xx)
+            for row, fraction in enumerate(longitudinal):
+                points = origin[:3, None] + fraction * np.asarray(ring_directions).T * lengths[None, :]
+                xx[row], yy[row], zz[row] = points[0], points[1], points[2]
+            fig.add_trace(go.Surface(
+                x=xx, y=yy, z=zz, showscale=False, opacity=0.20,
+                colorscale=[[0, "#38bdf8"], [1, "#a78bfa"]],
+                hovertemplate="Superficie de emisión<extra></extra>", showlegend=False,
+            ))
+            center_distance = _preview_distance(origin[:3], direction, surfaces, float(beam_length))
+            endpoint = origin[:3] + center_distance * direction
+            fig.add_trace(go.Scatter3d(
+                x=[origin[0], endpoint[0]], y=[origin[1], endpoint[1]], z=[origin[2], endpoint[2]],
+                mode="lines", line=dict(color=LASER_GREEN if ray_count == 1 else "#e0f2fe", width=4),
+                showlegend=False, hoverinfo="skip",
+            ))
+
     if origin is not None:
         source_color = LASER_GREEN if ray_count == 1 else FLASHLIGHT_YELLOW
         source_label = "Láser" if ray_count == 1 else "Linterna"
