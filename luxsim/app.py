@@ -121,11 +121,12 @@ def show_formulas(mode, env_id, angle_2d, azimuth_3d, elevation_3d):
         st.markdown("**2. Trayectoria del rayo**")
         if mode == "2D":
             st.latex(r"\mathbf{d}=(\cos\theta,\sin\theta)")
-            st.caption(f"Dirección central actual: {angle_2d}°")
+            st.caption(f"Dirección central actual: θ = {angle_2d}° · d = ({np.cos(np.radians(angle_2d)):.3f}, {np.sin(np.radians(angle_2d)):.3f})")
         else:
             st.latex(r"\mathbf{d}=(\cos\varphi\cos\theta,\cos\varphi\sin\theta,\sin\varphi)")
-            st.caption(f"Azimut: {azimuth_3d}° · elevación: {elevation_3d}°")
+            st.caption(f"Azimut: {azimuth_3d}° · elevación: {elevation_3d}° · d = ({np.cos(np.radians(elevation_3d))*np.cos(np.radians(azimuth_3d)):.3f}, {np.cos(np.radians(elevation_3d))*np.sin(np.radians(azimuth_3d)):.3f}, {np.sin(np.radians(elevation_3d)):.3f})")
         st.latex(r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq0")
+        st.caption(f"Fuente actual: P₀ = ({\", \".join(f\"{v:.2f}\" for v in position)}) · alcance = {max_distance} u · rayos = {ray_count} · apertura = {aperture}°")
     with right:
         st.markdown("**3. Intersección y rebote**")
         st.caption("Se busca el primer punto de la superficie que cumple la ecuación de la trayectoria.")
@@ -156,41 +157,41 @@ with st.sidebar:
     )
     st.divider()
     st.markdown("**1 · Escena**")
-    with st.form("simulation_settings", border=False):
-        mode = st.radio("Dimensión", ["2D", "3D"], horizontal=True, key="ui_mode")
-        options = ENVIRONMENTS_2D if mode == "2D" else ENVIRONMENTS_3D
-        env_id = st.selectbox("Figura", list(options), format_func=lambda key: options[key], key=f"scene_{mode}")
-    
-        st.markdown("**2 · Ubicación de la fuente**")
-        source_region = st.radio(
-            "La fuente estará",
-            ["Dentro de la figura", "Fuera de la figura"],
-            horizontal=False,
-            key=f"source_region_{mode}",
-        )
-        if mode == "2D":
-            source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_2d")
-            source_y = st.slider("Coordenada Y", -8.0, 8.0, 2.0, 0.5, key="source_y_2d")
-            position = [source_x, source_y]
-            angle_2d = st.slider("Dirección central (°)", 0, 355, 270, 5, key="angle_2d")
-            aperture = st.slider("Apertura angular (°)", 0, 100, 50, 5, key="aperture_2d")
-            azimuth_3d, elevation_3d = 30, 55
-        else:
-            source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_3d")
-            source_y = st.slider("Coordenada Y", -8.0, 8.0, 0.0, 0.5, key="source_y_3d")
-            source_z = st.slider("Coordenada Z", -3.0, 13.0, 1.0, 0.5, key="source_z_3d")
-            position = [source_x, source_y, source_z]
-            azimuth_3d = st.slider("Azimut (°)", 0, 355, 30, 5, key="azimuth_3d")
-            elevation_3d = st.slider("Elevación (°)", -85, 85, 25, 5, key="elevation_3d")
-            aperture = st.slider("Apertura del cono (°)", 0, 140, 100, 5, key="aperture_3d")
-            angle_2d = 90
-    
-        ray_max = MAX_RAYS
-        ray_default = 7
-        ray_key = "ray_count_2d" if mode == "2D" else "ray_count_3d"
-        ray_count = st.slider("Rayos emitidos", 1, ray_max, ray_default, 1, key=ray_key)
-        max_distance = st.slider("Alcance máximo (unidades)", 5, 30, 15, 5, key="max_ray_distance")
-        submitted = st.form_submit_button("Aplicar parámetros y simular", type="primary", use_container_width=True)
+    mode = st.radio("Dimensión", ["2D", "3D"], horizontal=True, key="ui_mode")
+    options = ENVIRONMENTS_2D if mode == "2D" else ENVIRONMENTS_3D
+    env_id = st.selectbox("Figura", list(options), format_func=lambda key: options[key], key=f"scene_{mode}")
+
+    st.markdown("**2 · Ubicación de la fuente**")
+    source_region = st.radio(
+        "La fuente estará",
+        ["Dentro de la figura", "Fuera de la figura"],
+        horizontal=False,
+        key=f"source_region_{mode}",
+    )
+    if mode == "2D":
+        source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_2d")
+        source_y = st.slider("Coordenada Y", -8.0, 8.0, 2.0, 0.5, key="source_y_2d")
+        position = [source_x, source_y]
+        angle_2d = st.slider("Dirección central (°)", 0, 355, 270, 5, key="angle_2d")
+        aperture = st.slider("Apertura angular (°)", 0, 100, 50, 5, key="aperture_2d")
+        azimuth_3d, elevation_3d = 30, 55
+    else:
+        source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_3d")
+        source_y = st.slider("Coordenada Y", -8.0, 8.0, 0.0, 0.5, key="source_y_3d")
+        source_z = st.slider("Coordenada Z", -3.0, 13.0, 1.0, 0.5, key="source_z_3d")
+        position = [source_x, source_y, source_z]
+        azimuth_3d = st.slider("Azimut (°)", 0, 355, 30, 5, key="azimuth_3d")
+        elevation_3d = st.slider("Elevación (°)", -85, 85, 25, 5, key="elevation_3d")
+        aperture = st.slider("Apertura del cono (°)", 0, 140, 100, 5, key="aperture_3d")
+        angle_2d = 90
+
+    ray_max = MAX_RAYS
+    ray_default = 7
+    ray_key = "ray_count_2d" if mode == "2D" else "ray_count_3d"
+    ray_count = st.slider("Rayos emitidos", 1, ray_max, ray_default, 1, key=ray_key)
+    max_distance = st.slider("Alcance máximo (unidades)", 5, 30, 15, 5, key="max_ray_distance")
+
+    submitted = st.button("Aplicar parámetros y simular", type="primary", use_container_width=True)
 
 if submitted:
     st.session_state.has_applied_config = True
@@ -231,7 +232,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-if not st.session_state.has_applied_config:
+if not st.session_state.has_applied_config or signature != st.session_state.config_signature:
     preview_scene = build_environment(env_id, mode)
     preview = plot_scene(preview_scene, [], is_3d=(mode == "3D"), source_position=position,
         beam_direction=(np.cos(np.radians(angle_2d)), np.sin(np.radians(angle_2d))) if mode == "2D" else None,
@@ -266,6 +267,11 @@ else:
     c1.metric("Rayos emitidos", len(rays))
     c2.metric("Rayos que escaparon", escaped)
     c3.metric("Rayos que alcanzaron el límite de rebotes", capped)
+    selected_ray_index = st.selectbox("Inspeccionar recorrido", options=list(range(len(rays))), format_func=lambda i: f"Rayo {i + 1} · {len(rays[i].history) - 1} impactos/tramos", key="selected_ray_index") if rays else 0
+    if rays:
+        selected_ray = rays[selected_ray_index]
+        history_rows = [{"Paso": i, "X": float(item[0][0]), "Y": float(item[0][1]), **({"Z": float(item[0][2])} if len(item[0]) > 2 else {}), "Distancia acumulada": float(item[3]), "Estado": item[2].value} for i, item in enumerate(selected_ray.history)]
+        st.dataframe(history_rows, use_container_width=True, hide_index=True)
 
     @st.fragment(run_every=0.10 if st.session_state.animation_playing else None)
     def animated_scene():
