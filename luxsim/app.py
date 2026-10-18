@@ -151,7 +151,7 @@ if "config_signature" not in st.session_state:
 
 with st.sidebar:
     st.markdown(
-        '<div class="lux-brand"><div class="lux-mark">✦</div><div><div class="lux-eyebrow">Laboratorio geométrico</div><div style="font-size:1.2rem;font-weight:800;color:#17283f;">LUXSIM</div></div></div>',
+        '<div class="lux-brand"><div class="lux-mark">✦</div><div><div class="lux-eyebrow">Laboratorio geométrico</div><div style="font-size:1.2rem;font-weight:800;color:#e5eefc;">LUXSIM</div></div></div>',
         unsafe_allow_html=True,
     )
     st.divider()
