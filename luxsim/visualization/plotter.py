@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 from core.ray import RayState
 
 
-# Palette sémantique : mêmes couleurs dans toutes les scènes.
+# Paleta semántica coherente entre escenas y dimensiones.
 INK = "#24364b"
 GRID = "#e8eef5"
 WALL = "#8292a8"
@@ -83,8 +83,7 @@ def _add_2d_surface(fig, surf):
         fig.add_trace(go.Scatter(
             x=x, y=y, mode="lines", name=label,
             line=dict(color=color, width=2.5),
-            fill="toself" if surf.type != "RECEPTOR" else None,
-            fillcolor=WALL_FILL if surf.type != "RECEPTOR" else None,
+            fill="toself", fillcolor=WALL_FILL,
             hovertemplate=f"{label}<extra></extra>",
         ))
     elif name == "Ellipse2D":
@@ -112,11 +111,9 @@ def _add_3d_surface(fig, surf):
         y = surf.cb[1] + surf.r * np.sin(th)
         fig.add_trace(go.Surface(
             x=x, y=y, z=zz, name=label, showscale=False,
-            opacity=0.17 if surf.type != "RECEPTOR" else 0.72,
-            colorscale=[[0, color], [1, color]],
+            opacity=0.17, colorscale=[[0, color], [1, color]],
             hovertemplate=f"{label}<extra></extra>",
             lighting=dict(ambient=0.8, diffuse=0.35, specular=0.12, roughness=0.9),
-            showlegend=True,
         ))
     elif name == "Disk3D":
         theta = np.linspace(0, 2 * np.pi, 72)
@@ -131,10 +128,9 @@ def _add_3d_surface(fig, surf):
         xyz = center[:, None, None] + u[:, None, None] * (rr * np.cos(tt))[None, :, :] + v[:, None, None] * (rr * np.sin(tt))[None, :, :]
         fig.add_trace(go.Surface(
             x=xyz[0], y=xyz[1], z=xyz[2], name=label, showscale=False,
-            opacity=0.76 if surf.type == "RECEPTOR" else 0.12,
+            opacity=0.78 if surf.type == "RECEPTOR" else 0.12,
             colorscale=[[0, color], [1, color]],
             hovertemplate=f"{label}<extra></extra>",
-            showlegend=True,
         ))
     elif name == "Ellipsoid3D":
         u = np.linspace(0, 2 * np.pi, 48)
@@ -148,7 +144,6 @@ def _add_3d_surface(fig, surf):
             opacity=0.16, colorscale=[[0, color], [1, color]],
             hovertemplate=f"{label}<extra></extra>",
             lighting=dict(ambient=0.8, diffuse=0.4, specular=0.1, roughness=0.9),
-            showlegend=True,
         ))
 
 
@@ -156,15 +151,13 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf")):
     """Dibuja las geometrías implementadas y los historiales reales de los rayos."""
     fig = go.Figure()
 
-    # Superficies físicas.
     for surf in surfaces:
         if is_3d:
             _add_3d_surface(fig, surf)
         else:
             _add_2d_surface(fig, surf)
 
-    # Trayectorias calculadas por el motor.
-    ray_points = []
+    grouped = {}
     for ray in rays:
         pts = interpolate_ray_history(ray.history, max_time_dist)
         if len(pts) < 2:
@@ -177,12 +170,8 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf")):
             RayState.MAX_BOUNCES: "Límite de rebotes",
             RayState.ACTIVE: "Rayo",
         }.get(ray.state, "Rayo")
-        ray_points.append((pts, color, label))
-
-    # Agrupar por estado para no crear cientos de entradas de leyenda.
-    grouped = {}
-    for pts, color, label in ray_points:
         grouped.setdefault((color, label), []).append(pts)
+
     for (color, label), paths in grouped.items():
         if is_3d:
             xs, ys, zs = [], [], []
@@ -192,9 +181,7 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf")):
                 zs.extend(pts[:, 2].tolist() + [None])
             fig.add_trace(go.Scatter3d(
                 x=xs, y=ys, z=zs, mode="lines", name=label,
-                line=dict(color=color, width=3),
-                hoverinfo="skip",
-                connectgaps=False,
+                line=dict(color=color, width=3), hoverinfo="skip", connectgaps=False,
             ))
         else:
             xs, ys = [], []
@@ -203,16 +190,10 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf")):
                 ys.extend(pts[:, 1].tolist() + [None])
             fig.add_trace(go.Scatter(
                 x=xs, y=ys, mode="lines", name=label,
-                line=dict(color=color, width=1.6),
-                hoverinfo="skip",
-                connectgaps=False,
+                line=dict(color=color, width=1.6), hoverinfo="skip", connectgaps=False,
             ))
 
-    # Fuente: el origen de cada historial identifica la fuente efectiva.
-    origins = []
-    for ray in rays:
-        if ray.history:
-            origins.append(np.asarray(ray.history[0][0], dtype=float))
+    origins = [np.asarray(ray.history[0][0], dtype=float) for ray in rays if ray.history]
     if origins:
         origin = origins[0]
         if is_3d and len(origin) >= 3:
@@ -231,10 +212,25 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf")):
                 hovertemplate="Fuente luminosa<extra></extra>",
             ))
 
+    # Trazas ficticias transparentes para una leyenda consistente incluso con superficies 3D.
+    present_types = {surf.type for surf in surfaces}
+    legend_items = [
+        ("WALL", WALL, "Superficie"),
+        ("RECEPTOR", RECEIVER, "Receptor"),
+        ("ABERTURA", ESCAPE, "Abertura / escape"),
+    ]
+    for surf_type, color, label in legend_items:
+        if surf_type in present_types:
+            fig.add_trace(go.Scatter(
+                x=[None], y=[None], mode="lines", name=label,
+                line=dict(color=color, width=4), showlegend=True,
+                visible="legendonly" if is_3d else True,
+            ))
+
     base_layout = dict(
         template="plotly_white",
         height=650 if is_3d else 610,
-        margin=dict(l=12, r=12, t=38, b=12),
+        margin=dict(l=12, r=12, t=42, b=12),
         paper_bgcolor="#ffffff",
         plot_bgcolor="#fbfdff",
         font=dict(family="Inter, Segoe UI, sans-serif", color=INK, size=12),
