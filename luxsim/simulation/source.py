@@ -49,15 +49,22 @@ class Source3D:
         u = normalize(np.cross(up, self.dir_vec))
         v = np.cross(self.dir_vec, u)
 
-        # Espiral de Fibonacci para distribuir rayos uniformente en un casquete esférico
+        # Distribución de Fibonacci sobre un casquete esférico.
+        # El ángulo polar controla la apertura y el azimut distribuye los
+        # rayos alrededor del eje, evitando que la emisión parezca casi 2D.
         max_angle = self.angle_spread / 2.0
+        golden_angle = np.pi * (3.0 - np.sqrt(5.0))
         for i in range(self.num_rays):
             if self.num_rays == 1:
                 d = self.dir_vec
             else:
-                z = 1 - (i / (self.num_rays - 1)) * (1 - np.cos(max_angle))
-                theta = np.sqrt(self.num_rays * np.pi) * np.arccos(z)
-                r = np.sqrt(1 - z*z)
-                d = (r * np.cos(theta)) * u + (r * np.sin(theta)) * v + z * self.dir_vec
+                cos_polar = 1.0 - ((i + 0.5) / self.num_rays) * (1.0 - np.cos(max_angle))
+                sin_polar = np.sqrt(max(0.0, 1.0 - cos_polar * cos_polar))
+                azimuth = i * golden_angle
+                d = (
+                    sin_polar * np.cos(azimuth) * u
+                    + sin_polar * np.sin(azimuth) * v
+                    + cos_polar * self.dir_vec
+                )
             rays.append(Ray(self.position, d, energy=energy_per_ray))
         return rays
