@@ -170,9 +170,9 @@ with st.sidebar:
         )
         if mode == "2D":
             source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_2d")
-            source_y = st.slider("Coordenada Y", -8.0, 8.0, 0.0, 0.5, key="source_y_2d")
+            source_y = st.slider("Coordenada Y", -8.0, 8.0, 2.0, 0.5, key="source_y_2d")
             position = [source_x, source_y]
-            angle_2d = st.slider("Dirección central (°)", 0, 355, 90, 5, key="angle_2d")
+            angle_2d = st.slider("Dirección central (°)", 0, 355, 270, 5, key="angle_2d")
             aperture = st.slider("Apertura angular (°)", 0, 100, 50, 5, key="aperture_2d")
             azimuth_3d, elevation_3d = 30, 55
         else:
@@ -201,7 +201,7 @@ placement_ok = (mode == "2D" and env_id == "C") or (inside if source_region == "
 
 # Al cambiar posición, orientación o escena se recalcula automáticamente.
 # Así la fuente puede desplazarse sin tener que iniciar de nuevo manualmente.
-if submitted and signature != st.session_state.config_signature:
+if submitted:
     if placement_ok:
         try:
             scene = build_environment(env_id, mode)
@@ -334,11 +334,3 @@ else:
     with st.expander("Conceptos y fórmulas", expanded=False):
         show_formulas(mode, env_id, angle_2d, azimuth_3d, elevation_3d)
         st.divider()
-        st.markdown("**Lectura de la simulación**")
-        st.markdown(
-            "- **Fuente:** punto inicial de los rayos.\n"
-            "- **Trayectoria:** recta vectorial desde la posición y dirección iniciales.\n"
-            "- **Intersección:** primer punto donde la trayectoria alcanza la superficie.\n"
-            "- **Rebote:** reflexión especular calculada a partir de la normal local.\n"
-            "- **Límite de rebotes:** detiene un rayo tras el máximo configurado para evitar recorridos infinitos."
-        )
