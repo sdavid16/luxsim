@@ -17,12 +17,10 @@ class Ray:
         self.origin = np.array(origin, dtype=float)
         self.direction = normalize(np.array(direction, dtype=float))
         self.energy = energy
-        self.initial_energy = energy
         self.bounces = 0
         self.max_bounces = max_bounces
         self.state = RayState.ACTIVE
         self.cumulative_distance = 0.0
-        self.captured_by = None # Referencia a la superficie que lo captó
         
         # Historial: (posición, energía, estado, distancia_acumulada)
         self.history = [(self.origin.copy(), self.energy, self.state, self.cumulative_distance)]
