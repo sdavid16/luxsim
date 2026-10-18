@@ -286,10 +286,12 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_p
             center = np.asarray(beam_direction, dtype=float)
             center /= max(np.linalg.norm(center), 1e-12)
             center_angle = np.arctan2(center[1], center[0])
+            full_circle = np.isclose(float(aperture_degrees), 360.0)
             angles = [center_angle] if ray_count == 1 else np.linspace(
                 center_angle - np.radians(aperture_degrees) / 2,
                 center_angle + np.radians(aperture_degrees) / 2,
                 ray_count,
+                endpoint=not full_circle,
             )
             for index, angle in enumerate(angles):
                 direction = np.array([np.cos(angle), np.sin(angle)])
