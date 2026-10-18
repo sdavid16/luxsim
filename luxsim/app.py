@@ -179,7 +179,7 @@ with st.sidebar:
     else:
         source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_3d")
         source_y = st.slider("Coordenada Y", -8.0, 8.0, 0.0, 0.5, key="source_y_3d")
-        source_z = st.slider("Coordenada Z", -3.0, 13.0, 5.0, 0.5, key="source_z_3d")
+        source_z = st.slider("Coordenada Z", -3.0, 13.0, 1.0, 0.5, key="source_z_3d")
         position = [source_x, source_y, source_z]
         azimuth_3d = st.slider("Azimut (°)", 0, 355, 30, 5, key="azimuth_3d")
         elevation_3d = st.slider("Elevación (°)", -85, 85, 25, 5, key="elevation_3d")
@@ -241,7 +241,7 @@ else:
     c2.metric("Rayos que escaparon", escaped)
     c3.metric("Rayos que alcanzaron el límite de rebotes", capped)
 
-    @st.fragment(run_every=0.10)
+    @st.fragment(run_every=0.10 if st.session_state.animation_playing else None)
     def animated_scene():
         controls = st.columns([1, 1, 2, 4])
         if st.session_state.animation_playing:
@@ -256,6 +256,7 @@ else:
             st.session_state.animation_progress = 0.0
             st.session_state.animation_last_tick = time.monotonic()
             st.session_state.animation_playing = True
+            st.rerun()
         speed = controls[2].slider(
             "Velocidad",
             min_value=0.5,
@@ -277,6 +278,7 @@ else:
             st.session_state.animation_last_tick = now
             if st.session_state.animation_progress >= st.session_state.max_sim_dist:
                 st.session_state.animation_playing = False
+                st.rerun()
 
         progress = float(st.session_state.animation_progress)
         st.markdown(f'<div class="lux-section">{options[env_id]} · vista {mode}</div>', unsafe_allow_html=True)
