@@ -44,7 +44,7 @@ st.markdown(
 ENVIRONMENTS_2D = {"A": "Circunferencia", "B": "Elipse", "C": "Recta reflectante"}
 ENVIRONMENTS_3D = {"A": "Cilindro", "B": "Esfera", "C": "Elipsoide"}
 MAX_RAYS = 10
-MAX_BOUNCES = 12
+MAX_BOUNCES = 40
 
 
 def build_environment(env_id, mode):
@@ -111,7 +111,7 @@ FORMULAS = {
 }
 
 
-def show_formulas(mode, env_id, angle_2d, azimuth_3d, elevation_3d):
+def show_formulas(mode, env_id, angle_2d, azimuth_3d, elevation_3d, position, max_distance, ray_count, aperture, max_bounces):
     left, right = st.columns(2)
     figure_name, figure_formula = FORMULAS[(mode, env_id)]
     with left:
@@ -134,6 +134,9 @@ def show_formulas(mode, env_id, angle_2d, azimuth_3d, elevation_3d):
         st.caption("En un rebote especular ideal, la componente normal de la dirección cambia de signo.")
         st.latex(r"\mathbf{d}_{\mathrm{salida}}=\mathbf{d}_{\mathrm{entrada}}-2(\mathbf{d}_{\mathrm{entrada}}\cdot\mathbf{n})\mathbf{n}")
         st.caption("Aquí n es la normal unitaria a la superficie en el punto de impacto.")
+        st.markdown("**4. Límites de simulación**")
+        st.latex(r"0 \\leq s \\leq L_{\\max}, \\qquad N_{\\mathrm{rebotes}} \\leq N_{\\max}")
+        st.caption(f"Alcance máximo: {max_distance} u · rebotes máximos: {max_bounces} · rayos: {ray_count} · apertura: {aperture}°")
 
 
 if "config_signature" not in st.session_state:
@@ -189,14 +192,15 @@ with st.sidebar:
     ray_default = 7
     ray_key = "ray_count_2d" if mode == "2D" else "ray_count_3d"
     ray_count = st.slider("Rayos emitidos", 1, ray_max, ray_default, 1, key=ray_key)
-    max_distance = st.slider("Alcance máximo (unidades)", 5, 30, 15, 5, key="max_ray_distance")
+    max_distance = st.slider("Alcance máximo (unidades)", 5, 100, 30, 5, key="max_ray_distance")
+    max_bounces = st.slider("Rebotes máximos", 1, MAX_BOUNCES, 20, 1, key="max_bounces")
 
-    submitted = st.button("Aplicar parámetros y simular", type="primary", use_container_width=True)
+    submitted = st.button("Simular", type="primary", use_container_width=True)
 
 if submitted:
     st.session_state.has_applied_config = True
 
-signature = (mode, env_id, source_region, tuple(position), angle_2d, azimuth_3d, elevation_3d, aperture, ray_count, max_distance)
+signature = (mode, env_id, source_region, tuple(position), angle_2d, azimuth_3d, elevation_3d, aperture, ray_count, max_distance, max_bounces)
 inside = is_inside_figure(env_id, mode, position)
 placement_ok = (mode == "2D" and env_id == "C") or (inside if source_region == "Dentro de la figura" else not inside)
 
@@ -206,7 +210,7 @@ if submitted:
         try:
             scene = build_environment(env_id, mode)
             source = build_source(mode, position, angle_2d, azimuth_3d, elevation_3d, aperture, ray_count)
-            rays, metrics = run_simulation(source, scene, MAX_BOUNCES, max_distance=float(max_distance))
+            rays, metrics = run_simulation(source, scene, max_bounces, max_distance=float(max_distance))
             max_dist = float(max_distance)
             st.session_state.update({
                 "rays": rays,
@@ -263,10 +267,12 @@ else:
     escaped = sum(ray.state == RayState.ESCAPED for ray in rays)
     capped = sum(ray.state == RayState.MAX_BOUNCES for ray in rays)
     absorbed = sum(ray.state == RayState.ABSORBED for ray in rays)
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("Rayos emitidos", len(rays))
-    c2.metric("Rayos que escaparon", escaped)
-    c3.metric("Rayos que alcanzaron el límite de rebotes", capped)
+    c2.metric("Captados", sum(ray.state == RayState.CAPTURED for ray in rays))
+    c3.metric("Escapados / absorbidos", escaped + absorbed)
+    c4.metric("Eficiencia de captación", f"{metrics.get('eficiencia_pct', 0.0):.1f}%")
+    st.caption(f"Recorridos limitados a {max_distance} unidades y {max_bounces} rebotes por rayo.")
     selected_ray_index = st.selectbox("Inspeccionar recorrido", options=list(range(len(rays))), format_func=lambda i: f"Rayo {i + 1} · {len(rays[i].history) - 1} impactos/tramos", key="selected_ray_index") if rays else 0
     if rays:
         selected_ray = rays[selected_ray_index]
@@ -336,7 +342,7 @@ else:
     animated_scene()
 
     with st.expander("Conceptos y fórmulas", expanded=False):
-        show_formulas(mode, env_id, angle_2d, azimuth_3d, elevation_3d)
+        show_formulas(mode, env_id, angle_2d, azimuth_3d, elevation_3d, position, max_distance, ray_count, aperture, max_bounces)
         st.markdown("**Valores geométricos de la figura**")
         if mode == "2D" and env_id == "A":
             geometry_values = [{"Parámetro": "Centro (h, k)", "Valor aplicado": "(0, 0)"}, {"Parámetro": "Radio r", "Valor aplicado": "5 u"}]
