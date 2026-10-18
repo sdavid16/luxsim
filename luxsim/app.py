@@ -336,4 +336,18 @@ else:
 
     with st.expander("Conceptos y fórmulas", expanded=False):
         show_formulas(mode, env_id, angle_2d, azimuth_3d, elevation_3d)
+        st.markdown("**Valores geométricos de la figura**")
+        if mode == "2D" and env_id == "A":
+            geometry_values = [{"Parámetro": "Centro (h, k)", "Valor aplicado": "(0, 0)"}, {"Parámetro": "Radio r", "Valor aplicado": "5 u"}]
+        elif mode == "2D" and env_id == "B":
+            geometry_values = [{"Parámetro": "Centro (h, k)", "Valor aplicado": "(0, 0)"}, {"Parámetro": "Semieje horizontal a", "Valor aplicado": "6 u"}, {"Parámetro": "Semieje vertical b", "Valor aplicado": "4 u"}]
+        elif mode == "2D":
+            geometry_values = [{"Parámetro": "Punto inicial", "Valor aplicado": "(-8, 0)"}, {"Parámetro": "Punto final", "Valor aplicado": "(8, 0)"}, {"Parámetro": "Longitud", "Valor aplicado": "16 u"}]
+        elif env_id == "A":
+            geometry_values = [{"Parámetro": "Centro de la base", "Valor aplicado": "(0, 0, 0)"}, {"Parámetro": "Radio r", "Valor aplicado": "5 u"}, {"Parámetro": "Altura h", "Valor aplicado": "10 u"}, {"Parámetro": "Intervalo z", "Valor aplicado": "[0, 10]"}]
+        elif env_id == "B":
+            geometry_values = [{"Parámetro": "Centro (h, k, l)", "Valor aplicado": "(0, 0, 0)"}, {"Parámetro": "Radio r", "Valor aplicado": "5 u"}]
+        else:
+            geometry_values = [{"Parámetro": "Centro (h, k, l)", "Valor aplicado": "(0, 0, 0)"}, {"Parámetro": "Semieje a", "Valor aplicado": "6 u"}, {"Parámetro": "Semieje b", "Valor aplicado": "4 u"}, {"Parámetro": "Semieje c", "Valor aplicado": "8 u"}]
+        st.dataframe(geometry_values, use_container_width=True, hide_index=True)
         st.divider()
