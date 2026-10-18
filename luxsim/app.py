@@ -212,7 +212,7 @@ with st.sidebar:
         ray_default = 7 if mode == "2D" else 19
         ray_key = "ray_count_2d" if mode == "2D" else "ray_count_3d"
         ray_count = st.slider("Rayos emitidos", 1, ray_max, ray_default, 2, key=ray_key, help="Un rayo representa un láser; varios, una linterna.")
-        max_distance = st.slider("Alcance máximo (unidades)", 5, 60, 25, 5, key="max_ray_distance", help="Distancia total máxima por rayo, incluidos los rebotes.")
+        max_distance = st.slider("Alcance máximo (unidades)", 5, 30, 15, 5, key="max_ray_distance", help="Distancia total máxima por rayo, incluidos los rebotes.")
         submitted = st.form_submit_button("Aplicar parámetros y simular", type="primary", use_container_width=True)
 
 if submitted:
