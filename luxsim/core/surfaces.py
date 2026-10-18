@@ -28,11 +28,6 @@ class Segment2D(Surface):
         self.u = self.v / self.length
         self.normal = normalize(np.array([-self.v[1], self.v[0]]))
         
-    def get_uv(self, point):
-        """Devuelve la distancia local (1D) a lo largo del segmento para el mapa de calor."""
-        w = point - self.p1
-        return np.dot(w, self.u)
-
     def intersect(self, ro, rd, epsilon):
         ro = np.array(ro, dtype=float)
         rd = np.array(rd, dtype=float)
@@ -120,11 +115,6 @@ class RectangularPlane3D(Surface):
             n = self.normal if denom < 0 else -self.normal
             return t, n
         return None
-
-    def get_uv(self, point):
-        """Devuelve coordenadas (u, v) locales del plano."""
-        w = point - self.center
-        return np.dot(w, self.u_dir), np.dot(w, self.v_dir)
 
 class Disk3D(Surface):
     """Superficie geométrica analítica usada por el trazador de rayos."""
