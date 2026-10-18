@@ -277,36 +277,44 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_p
         elif is_3d and beam_direction_3d is not None:
             direction = np.asarray(beam_direction_3d, dtype=float)
             direction /= max(np.linalg.norm(direction), 1e-12)
-            half_angle = np.radians(float(aperture_degrees)) / 2.0
-            reference = np.array([0.0, 0.0, 1.0]) if abs(direction[2]) < 0.9 else np.array([1.0, 0.0, 0.0])
-            u = np.cross(direction, reference)
-            u /= max(np.linalg.norm(u), 1e-12)
-            v = np.cross(direction, u)
-            phi = np.linspace(0.0, 2.0 * np.pi, 32)
-            longitudinal = np.linspace(0.0, 1.0, 12)
-            ring_directions = [
-                np.cos(half_angle) * direction + np.sin(half_angle) * (np.cos(angle) * u + np.sin(angle) * v)
-                for angle in phi
-            ]
-            lengths = np.array([_preview_distance(origin[:3], edge, surfaces, float(beam_length)) for edge in ring_directions])
-            xx = np.empty((len(longitudinal), len(phi)))
-            yy = np.empty_like(xx)
-            zz = np.empty_like(xx)
-            for row, fraction in enumerate(longitudinal):
-                points = origin[:3, None] + fraction * np.asarray(ring_directions).T * lengths[None, :]
-                xx[row], yy[row], zz[row] = points[0], points[1], points[2]
-            fig.add_trace(go.Surface(
-                x=xx, y=yy, z=zz, showscale=False, opacity=0.20,
-                colorscale=[[0, "#38bdf8"], [1, "#a78bfa"]],
-                hovertemplate="Superficie de emisión<extra></extra>", showlegend=False,
-            ))
             center_distance = _preview_distance(origin[:3], direction, surfaces, float(beam_length))
             endpoint = origin[:3] + center_distance * direction
-            fig.add_trace(go.Scatter3d(
-                x=[origin[0], endpoint[0]], y=[origin[1], endpoint[1]], z=[origin[2], endpoint[2]],
-                mode="lines", line=dict(color=LASER_GREEN if ray_count == 1 else "#e0f2fe", width=4),
-                showlegend=False, hoverinfo="skip",
-            ))
+            if ray_count == 1:
+                # El láser individual tiene una única dirección, no una apertura cónica.
+                fig.add_trace(go.Scatter3d(
+                    x=[origin[0], endpoint[0]], y=[origin[1], endpoint[1]], z=[origin[2], endpoint[2]],
+                    mode="lines", line=dict(color=LASER_GREEN, width=4),
+                    showlegend=False, hoverinfo="skip",
+                ))
+            else:
+                half_angle = np.radians(float(aperture_degrees)) / 2.0
+                reference = np.array([0.0, 0.0, 1.0]) if abs(direction[2]) < 0.9 else np.array([1.0, 0.0, 0.0])
+                u = np.cross(direction, reference)
+                u /= max(np.linalg.norm(u), 1e-12)
+                v = np.cross(direction, u)
+                phi = np.linspace(0.0, 2.0 * np.pi, 32)
+                longitudinal = np.linspace(0.0, 1.0, 12)
+                ring_directions = [
+                    np.cos(half_angle) * direction + np.sin(half_angle) * (np.cos(angle) * u + np.sin(angle) * v)
+                    for angle in phi
+                ]
+                lengths = np.array([_preview_distance(origin[:3], edge, surfaces, float(beam_length)) for edge in ring_directions])
+                xx = np.empty((len(longitudinal), len(phi)))
+                yy = np.empty_like(xx)
+                zz = np.empty_like(xx)
+                for row, fraction in enumerate(longitudinal):
+                    points = origin[:3, None] + fraction * np.asarray(ring_directions).T * lengths[None, :]
+                    xx[row], yy[row], zz[row] = points[0], points[1], points[2]
+                fig.add_trace(go.Surface(
+                    x=xx, y=yy, z=zz, showscale=False, opacity=0.20,
+                    colorscale=[[0, "#38bdf8"], [1, "#a78bfa"]],
+                    hovertemplate="Superficie de emisión<extra></extra>", showlegend=False,
+                ))
+                fig.add_trace(go.Scatter3d(
+                    x=[origin[0], endpoint[0]], y=[origin[1], endpoint[1]], z=[origin[2], endpoint[2]],
+                    mode="lines", line=dict(color="#e0f2fe", width=4),
+                    showlegend=False, hoverinfo="skip",
+                ))
 
     if origin is not None:
         source_color = LASER_GREEN if ray_count == 1 else FLASHLIGHT_YELLOW
