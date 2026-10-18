@@ -232,7 +232,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-if not st.session_state.has_applied_config or signature != st.session_state.config_signature:
+if not st.session_state.has_applied_config or (signature != st.session_state.config_signature and not st.session_state.validation_error):
     preview_scene = build_environment(env_id, mode)
     preview = plot_scene(preview_scene, [], is_3d=(mode == "3D"), source_position=position,
         beam_direction=(np.cos(np.radians(angle_2d)), np.sin(np.radians(angle_2d))) if mode == "2D" else None,
