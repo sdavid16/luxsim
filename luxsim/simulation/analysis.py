@@ -1,3 +1,5 @@
+"""Análisis posterior de captación y búsqueda de parámetros de escena."""
+
 import numpy as np
 
 def calculate_heatmap_2d(rays, bins=20):

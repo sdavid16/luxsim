@@ -1,6 +1,9 @@
+"""Catálogo de escenas predefinidas para la simulación geométrica."""
+
 from core.surfaces import Segment2D, Circle2D, RectangularPlane3D, CylinderWall3D, Disk3D, Ellipse2D, Ellipsoid3D, PolygonPlane3D, SurfaceType
 
 class EnvironmentLibrary:
+    """Fábrica de escenas: devuelve superficies, incluidos receptores y aberturas."""
     @staticmethod
     def get_env_A_circular(radius, ref, rec_y):
         # A: Cámara Circular 2D

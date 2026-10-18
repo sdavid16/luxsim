@@ -1,3 +1,5 @@
+"""Primitivas geométricas y ecuaciones de intersección para escenas LUXSIM."""
+
 import numpy as np
 from .vectors import normalize
 
@@ -7,6 +9,7 @@ class SurfaceType:
     ESCAPE = "ABERTURA"
 
 class Surface:
+    """Interfaz común de una superficie reflectante, absorbente o receptora."""
     def __init__(self, reflectivity=1.0, surface_type=SurfaceType.WALL):
         self.reflectivity = np.clip(reflectivity, 0.0, 1.0)
         self.type = surface_type
@@ -15,6 +18,7 @@ class Surface:
         raise NotImplementedError
 
 class Segment2D(Surface):
+    """Superficie geométrica analítica usada por el trazador de rayos."""
     def __init__(self, p1, p2, reflectivity=1.0, surface_type=SurfaceType.WALL):
         super().__init__(reflectivity, surface_type)
         self.p1 = np.array(p1, dtype=float)
@@ -47,6 +51,7 @@ class Segment2D(Surface):
         return None
 
 class Circle2D(Surface):
+    """Superficie geométrica analítica usada por el trazador de rayos."""
     def __init__(self, center, radius, reflectivity=1.0, surface_type=SurfaceType.WALL):
         super().__init__(reflectivity, surface_type)
         self.center = np.array(center, dtype=float)
@@ -84,6 +89,7 @@ class Circle2D(Surface):
         return None
 
 class RectangularPlane3D(Surface):
+    """Superficie geométrica analítica usada por el trazador de rayos."""
     def __init__(self, center, u_vec, v_vec, u_size, v_size, reflectivity=1.0, surface_type=SurfaceType.WALL):
         super().__init__(reflectivity, surface_type)
         self.center = np.array(center, dtype=float)
@@ -121,6 +127,7 @@ class RectangularPlane3D(Surface):
         return np.dot(w, self.u_dir), np.dot(w, self.v_dir)
 
 class Disk3D(Surface):
+    """Superficie geométrica analítica usada por el trazador de rayos."""
     """Disco circular plano en 3D (para techos, suelos o receptores circulares)."""
     def __init__(self, center, normal, radius, reflectivity=1.0, surface_type=SurfaceType.WALL):
         super().__init__(reflectivity, surface_type)
@@ -147,6 +154,7 @@ class Disk3D(Surface):
         return None
 
 class CylinderWall3D(Surface):
+    """Superficie geométrica analítica usada por el trazador de rayos."""
     def __init__(self, center_base, radius, height, reflectivity=1.0, surface_type=SurfaceType.WALL):
         super().__init__(reflectivity, surface_type)
         self.cb = np.array(center_base, dtype=float)
@@ -187,6 +195,7 @@ class CylinderWall3D(Surface):
         return None
 
 class Ellipse2D(Surface):
+    """Superficie geométrica analítica usada por el trazador de rayos."""
     """Elipse en 2D centrada en los ejes."""
     def __init__(self, center, rx, ry, reflectivity=1.0, surface_type=SurfaceType.WALL):
         super().__init__(reflectivity, surface_type)
@@ -224,6 +233,7 @@ class Ellipse2D(Surface):
         return None
 
 class Ellipsoid3D(Surface):
+    """Superficie geométrica analítica usada por el trazador de rayos."""
     """Elipsoide en 3D."""
     def __init__(self, center, rx, ry, rz, reflectivity=1.0, surface_type=SurfaceType.WALL):
         super().__init__(reflectivity, surface_type)
@@ -255,6 +265,7 @@ class Ellipsoid3D(Surface):
         return None
 
 class PolygonPlane3D(Surface):
+    """Superficie geométrica analítica usada por el trazador de rayos."""
     """Polígono plano convexo en 3D; intersección analítica rayo-plano."""
     def __init__(self, vertices, reflectivity=1.0, surface_type=SurfaceType.WALL):
         super().__init__(reflectivity, surface_type)

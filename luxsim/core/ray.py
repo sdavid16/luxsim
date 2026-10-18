@@ -1,3 +1,5 @@
+"""Estado e historial acumulado de un rayo geométrico."""
+
 import numpy as np
 from enum import Enum
 from .vectors import normalize

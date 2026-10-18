@@ -1,3 +1,5 @@
+"""Intersección más cercana, reflexión especular y avance de los rayos."""
+
 import numpy as np
 from .surfaces import SurfaceType
 from .vectors import reflect
@@ -21,6 +23,7 @@ def calculate_closest_intersection(ray, surfaces, epsilon=1e-7):
     return min_t, best_surface, best_normal
 
 def step_ray(ray, surfaces, epsilon=1e-7):
+    """Avanza un rayo hasta su próximo evento: rebote, captura o escape."""
     if ray.state != RayState.ACTIVE:
         return
         
