@@ -43,7 +43,7 @@ st.markdown(
 
 ENVIRONMENTS_2D = {"A": "Circunferencia", "B": "Elipse", "C": "Recta reflectante"}
 ENVIRONMENTS_3D = {"A": "Cilindro", "B": "Esfera", "C": "Elipsoide"}
-MAX_RAYS = 10
+MAX_RAYS = 72
 MAX_BOUNCES = 40
 
 
@@ -176,7 +176,7 @@ with st.sidebar:
         source_y = st.slider("Coordenada Y", -8.0, 8.0, 2.0, 0.5, key="source_y_2d")
         position = [source_x, source_y]
         angle_2d = st.slider("Dirección central (°)", 0, 355, 270, 5, key="angle_2d")
-        aperture = st.slider("Apertura angular (°)", 0, 360, 360, 5, key="aperture_2d", help="360° distribuye los rayos en todas las direcciones del plano.")
+        aperture = st.slider("Apertura angular (°)", 0, 360, 50, 5, key="aperture_2d", help="360° distribuye los rayos en todas las direcciones del plano.")
         azimuth_3d, elevation_3d = 30, 55
     else:
         source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_3d")
@@ -185,7 +185,7 @@ with st.sidebar:
         position = [source_x, source_y, source_z]
         azimuth_3d = st.slider("Azimut (°)", 0, 355, 30, 5, key="azimuth_3d")
         elevation_3d = st.slider("Elevación (°)", -85, 85, 25, 5, key="elevation_3d")
-        aperture = st.slider("Apertura angular 3D (°)", 0, 360, 360, 5, key="aperture_3d", help="360° distribuye los rayos en todas las direcciones del espacio.")
+        aperture = st.slider("Apertura angular 3D (°)", 0, 360, 100, 5, key="aperture_3d", help="360° distribuye los rayos en todas las direcciones del espacio. Aumenta el número de rayos para una cobertura más densa.")
         angle_2d = 90
 
     ray_max = MAX_RAYS
