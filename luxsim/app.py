@@ -92,24 +92,24 @@ def build_source(env_id, mode, angle, aperture):
 FORMULAS = {
     ("2D", "A"): [
         ("Circunferencia (lugar geométrico)", r"(x-h)^2+(y-k)^2=r^2"),
-        ("Recta que representa cada rayo", r"\\mathbf{p}(t)=\\mathbf{p}_0+t\\mathbf{d},\\quad t\\geq 0"),
+        ("Recta que representa cada rayo", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq 0"),
     ],
     ("2D", "B"): [
-        ("Lados del rectángulo", r"\\mathbf{p}(t)=\\mathbf{p}_0+t\\mathbf{d},\\quad 0\\leq t\\leq 1"),
-        ("Intersección recta-segmento", r"\\mathbf{p}_0+t\\mathbf{d}=\\mathbf{a}+u(\\mathbf{b}-\\mathbf{a})"),
+        ("Lados del rectángulo", r"\mathbf{p}(u)=\mathbf{a}+u(\mathbf{b}-\mathbf{a}),\quad 0\leq u\leq 1"),
+        ("Intersección recta-segmento", r"\mathbf{p}_0+t\mathbf{d}=\mathbf{a}+u(\mathbf{b}-\mathbf{a})"),
     ],
     ("2D", "C"): [
-        ("Elipse (lugar geométrico)", r"\\frac{(x-h)^2}{a^2}+\\frac{(y-k)^2}{b^2}=1"),
-        ("Recta que representa cada rayo", r"\\mathbf{p}(t)=\\mathbf{p}_0+t\\mathbf{d},\\quad t\\geq 0"),
+        ("Elipse (lugar geométrico)", r"\frac{(x-h)^2}{a^2}+\frac{(y-k)^2}{b^2}=1"),
+        ("Recta que representa cada rayo", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq 0"),
     ],
     ("3D", "A"): [
         ("Superficie cilíndrica", r"(x-h)^2+(y-k)^2=r^2"),
-        ("Intervalo de altura", r"z_{\\min}\\leq z\\leq z_{\\max}"),
-        ("Recta en el espacio", r"\\mathbf{p}(t)=\\mathbf{p}_0+t\\mathbf{d},\\quad t\\geq 0"),
+        ("Intervalo de altura", r"z_{\min}\leq z\leq z_{\max}"),
+        ("Recta en el espacio", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq 0"),
     ],
     ("3D", "C"): [
-        ("Elipsoide", r"\\frac{(x-h)^2}{a^2}+\\frac{(y-k)^2}{b^2}+\\frac{(z-l)^2}{c^2}=1"),
-        ("Recta en el espacio", r"\\mathbf{p}(t)=\\mathbf{p}_0+t\\mathbf{d},\\quad t\\geq 0"),
+        ("Elipsoide", r"\frac{(x-h)^2}{a^2}+\frac{(y-k)^2}{b^2}+\frac{(z-l)^2}{c^2}=1"),
+        ("Recta en el espacio", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq 0"),
     ],
 }
 
@@ -120,9 +120,9 @@ def show_formulas(mode, env_id):
         st.caption(label)
         st.latex(formula)
     st.caption("Intersección: se sustituye la ecuación del rayo en la de la superficie y se elige el primer impacto válido (t > 0).")
-    st.latex(r"\\mathbf{p}(t)=\\mathbf{p}_0+t\\mathbf{d}")
+    st.latex(r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d}")
     st.caption("Reflexión ideal en una superficie con normal unitaria n.")
-    st.latex(r"\\mathbf{d}'=\\mathbf{d}-2(\\mathbf{d}\\cdot\\mathbf{n})\\mathbf{n}")
+    st.latex(r"\mathbf{d}'=\mathbf{d}-2(\mathbf{d}\cdot\mathbf{n})\mathbf{n}")
 
 
 if "rays" not in st.session_state:
