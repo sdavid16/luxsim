@@ -312,29 +312,52 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_p
                 # El láser individual es un haz estrecho, no un cono de emisión.
                 _add_tube_segment(fig, origin[:3], endpoint, color=LASER_GREEN, radius=0.055, opacity=0.82)
             else:
-                half_angle = np.radians(float(aperture_degrees)) / 2.0
-                reference = np.array([0.0, 0.0, 1.0]) if abs(direction[2]) < 0.9 else np.array([1.0, 0.0, 0.0])
-                u = np.cross(direction, reference)
-                u /= max(np.linalg.norm(u), 1e-12)
-                v = np.cross(direction, u)
-                phi = np.linspace(0.0, 2.0 * np.pi, 32)
-                longitudinal = np.linspace(0.0, 1.0, 12)
-                ring_directions = [
-                    np.cos(half_angle) * direction + np.sin(half_angle) * (np.cos(angle) * u + np.sin(angle) * v)
-                    for angle in phi
-                ]
-                lengths = np.array([_preview_distance(origin[:3], edge, surfaces, float(beam_length)) for edge in ring_directions])
-                xx = np.empty((len(longitudinal), len(phi)))
-                yy = np.empty_like(xx)
-                zz = np.empty_like(xx)
-                for row, fraction in enumerate(longitudinal):
-                    points = origin[:3, None] + fraction * np.asarray(ring_directions).T * lengths[None, :]
-                    xx[row], yy[row], zz[row] = points[0], points[1], points[2]
-                fig.add_trace(go.Surface(
-                    x=xx, y=yy, z=zz, showscale=False, opacity=0.20,
-                    colorscale=[[0, "#38bdf8"], [1, "#a78bfa"]],
-                    hovertemplate="Superficie de emisión<extra></extra>", showlegend=False,
-                ))
+                if float(aperture_degrees) >= 360.0 - 1e-9:
+                    # A 360° la fuente emite en toda la esfera, no en un cono degenerado.
+                    golden_angle = np.pi * (3.0 - np.sqrt(5.0))
+                    for index in range(ray_count):
+                        z_component = 1.0 - 2.0 * ((index + 0.5) / ray_count)
+                        radial = np.sqrt(max(0.0, 1.0 - z_component * z_component))
+                        phi = index * golden_angle
+                        ray_direction = np.array([
+                            radial * np.cos(phi),
+                            radial * np.sin(phi),
+                            z_component,
+                        ])
+                        distance = _preview_distance(origin[:3], ray_direction, surfaces, float(beam_length))
+                        endpoint = origin[:3] + distance * ray_direction
+                        fig.add_trace(go.Scatter3d(
+                            x=[origin[0], endpoint[0]],
+                            y=[origin[1], endpoint[1]],
+                            z=[origin[2], endpoint[2]],
+                            mode="lines",
+                            line=dict(color=FLASHLIGHT_PALETTE[index % len(FLASHLIGHT_PALETTE)], width=3),
+                            showlegend=False, hoverinfo="skip",
+                        ))
+                else:
+                    half_angle = np.radians(float(aperture_degrees)) / 2.0
+                    reference = np.array([0.0, 0.0, 1.0]) if abs(direction[2]) < 0.9 else np.array([1.0, 0.0, 0.0])
+                    u = np.cross(direction, reference)
+                    u /= max(np.linalg.norm(u), 1e-12)
+                    v = np.cross(direction, u)
+                    phi = np.linspace(0.0, 2.0 * np.pi, 32)
+                    longitudinal = np.linspace(0.0, 1.0, 12)
+                    ring_directions = [
+                        np.cos(half_angle) * direction + np.sin(half_angle) * (np.cos(angle) * u + np.sin(angle) * v)
+                        for angle in phi
+                    ]
+                    lengths = np.array([_preview_distance(origin[:3], edge, surfaces, float(beam_length)) for edge in ring_directions])
+                    xx = np.empty((len(longitudinal), len(phi)))
+                    yy = np.empty_like(xx)
+                    zz = np.empty_like(xx)
+                    for row, fraction in enumerate(longitudinal):
+                        points = origin[:3, None] + fraction * np.asarray(ring_directions).T * lengths[None, :]
+                        xx[row], yy[row], zz[row] = points[0], points[1], points[2]
+                    fig.add_trace(go.Surface(
+                        x=xx, y=yy, z=zz, showscale=False, opacity=0.20,
+                        colorscale=[[0, "#38bdf8"], [1, "#a78bfa"]],
+                        hovertemplate="Superficie de emisión<extra></extra>", showlegend=False,
+                    ))
                 fig.add_trace(go.Scatter3d(
                     x=[origin[0], endpoint[0]], y=[origin[1], endpoint[1]], z=[origin[2], endpoint[2]],
                     mode="lines", line=dict(color="#e0f2fe", width=4),
