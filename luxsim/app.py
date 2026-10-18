@@ -263,6 +263,7 @@ if not st.session_state.has_applied_config:
     preview_scene = build_environment(env_id, mode)
     preview = plot_scene(preview_scene, [], is_3d=(mode == "3D"), source_position=position,
         beam_direction=(np.cos(np.radians(angle_2d)), np.sin(np.radians(angle_2d))) if mode == "2D" else None,
+        beam_direction_3d=(np.cos(np.radians(elevation_3d)) * np.cos(np.radians(azimuth_3d)), np.cos(np.radians(elevation_3d)) * np.sin(np.radians(azimuth_3d)), np.sin(np.radians(elevation_3d))) if mode == "3D" else None,
         aperture_degrees=aperture, beam_length=float(max_distance), ray_count=ray_count)
     st.plotly_chart(preview, use_container_width=True, config={"displaylogo": False, "scrollZoom": True, "responsive": True})
 elif st.session_state.validation_error:
@@ -345,6 +346,7 @@ else:
             max_time_dist=progress,
             source_position=position,
             beam_direction=(np.cos(np.radians(angle_2d)), np.sin(np.radians(angle_2d))) if mode == "2D" else None,
+            beam_direction_3d=(np.cos(np.radians(elevation_3d)) * np.cos(np.radians(azimuth_3d)), np.cos(np.radians(elevation_3d)) * np.sin(np.radians(azimuth_3d)), np.sin(np.radians(elevation_3d))) if mode == "3D" else None,
             aperture_degrees=aperture, beam_length=float(max_distance), ray_count=ray_count,
         )
         st.plotly_chart(
