@@ -248,10 +248,12 @@ else:
             if controls[0].button("Pausar", use_container_width=True):
                 st.session_state.animation_playing = False
                 st.session_state.animation_last_tick = time.monotonic()
+                st.rerun()
         else:
             if controls[0].button("Continuar", use_container_width=True):
                 st.session_state.animation_playing = True
                 st.session_state.animation_last_tick = time.monotonic()
+                st.rerun()
         if controls[1].button("Reiniciar", use_container_width=True):
             st.session_state.animation_progress = 0.0
             st.session_state.animation_last_tick = time.monotonic()
