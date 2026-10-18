@@ -215,7 +215,7 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf")):
     # Trazas ficticias transparentes para una leyenda consistente incluso con superficies 3D.
     present_types = {surf.type for surf in surfaces}
     legend_items = [
-        ("WALL", WALL, "Superficie"),
+        ("PARED", WALL, "Superficie"),
         ("RECEPTOR", RECEIVER, "Receptor"),
         ("ABERTURA", ESCAPE, "Abertura / escape"),
     ]
@@ -224,7 +224,6 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf")):
             fig.add_trace(go.Scatter(
                 x=[None], y=[None], mode="lines", name=label,
                 line=dict(color=color, width=4), showlegend=True,
-                visible="legendonly" if is_3d else True,
             ))
 
     base_layout = dict(
