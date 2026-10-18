@@ -42,7 +42,6 @@ def step_ray(ray, surfaces, epsilon=1e-7):
         
     if surface.type == SurfaceType.RECEIVER:
         ray.origin = hit_point
-        ray.captured_by = surface
         ray.record_state(hit_point, RayState.CAPTURED)
         return
         
