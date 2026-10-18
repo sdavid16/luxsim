@@ -253,3 +253,44 @@ class Ellipsoid3D(Surface):
             if np.dot(normal, rd) > 0: normal = -normal
             return t_hit, normal
         return None
+
+class PolygonPlane3D(Surface):
+    """Polígono plano convexo en 3D; intersección analítica rayo-plano."""
+    def __init__(self, vertices, reflectivity=1.0, surface_type=SurfaceType.WALL):
+        super().__init__(reflectivity, surface_type)
+        self.vertices = np.asarray(vertices, dtype=float)
+        if self.vertices.ndim != 2 or self.vertices.shape[1] != 3 or len(self.vertices) < 3:
+            raise ValueError("Un polígono 3D requiere al menos tres vértices XYZ.")
+        self.center = self.vertices.mean(axis=0)
+        normal = np.cross(self.vertices[1] - self.vertices[0], self.vertices[2] - self.vertices[0])
+        self.normal = normalize(normal)
+        self.u = normalize(self.vertices[1] - self.vertices[0])
+        self.v = normalize(np.cross(self.normal, self.u))
+        self.poly2 = np.column_stack(((self.vertices - self.vertices[0]) @ self.u,
+                                      (self.vertices - self.vertices[0]) @ self.v))
+
+    def intersect(self, ro, rd, epsilon):
+        ro, rd = np.asarray(ro, dtype=float), np.asarray(rd, dtype=float)
+        denom = float(np.dot(self.normal, rd))
+        if abs(denom) < 1e-10:
+            return None
+        t = float(np.dot(self.vertices[0] - ro, self.normal) / denom)
+        if t <= epsilon:
+            return None
+        point = ro + t * rd
+        q = np.array([np.dot(point - self.vertices[0], self.u),
+                      np.dot(point - self.vertices[0], self.v)])
+        inside = False
+        j = len(self.poly2) - 1
+        for i in range(len(self.poly2)):
+            xi, yi = self.poly2[i]
+            xj, yj = self.poly2[j]
+            if ((yi > q[1]) != (yj > q[1])) and (
+                q[0] < (xj - xi) * (q[1] - yi) / ((yj - yi) or 1e-15) + xi
+            ):
+                inside = not inside
+            j = i
+        if inside:
+            normal = self.normal if denom < 0 else -self.normal
+            return t, normal
+        return None
