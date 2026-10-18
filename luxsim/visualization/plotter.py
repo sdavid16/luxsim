@@ -1,3 +1,9 @@
+"""Representación 2D/3D de escenas, superficies y trayectorias calculadas.
+
+Las intersecciones se calculan en el motor analítico; este módulo solo dibuja
+los resultados y una vista previa geométrica acotada al primer impacto.
+"""
+
 import numpy as np
 import plotly.graph_objects as go
 from core.ray import RayState
@@ -87,6 +93,7 @@ def _surface_color(surf):
 
 
 def _add_2d_surface(fig, surf):
+    """Añade una superficie 2D con estilo semántico y escala geométrica fiel."""
     name = type(surf).__name__
     color = _surface_color(surf)
     label = _surface_label(surf)
@@ -120,19 +127,20 @@ def _add_2d_surface(fig, surf):
 
 
 def _add_3d_surface(fig, surf):
+    """Genera la malla visual de una superficie 3D sin alterar su geometría analítica."""
     name = type(surf).__name__
     color = _surface_color(surf)
     label = _surface_label(surf)
 
     if name == "CylinderWall3D":
-        theta = np.linspace(0, 2 * np.pi, 48)
-        z = np.linspace(surf.cb[2], surf.cb[2] + surf.h, 8)
+        theta = np.linspace(0, 2 * np.pi, 72)
+        z = np.linspace(surf.cb[2], surf.cb[2] + surf.h, 16)
         th, zz = np.meshgrid(theta, z)
         x = surf.cb[0] + surf.r * np.cos(th)
         y = surf.cb[1] + surf.r * np.sin(th)
         fig.add_trace(go.Surface(
             x=x, y=y, z=zz, name=label, showscale=False,
-            opacity=0.30, colorscale=[[0, "#0e7490"], [0.45, color], [1, "#67e8f9"]],
+            opacity=0.24, colorscale=[[0, "#0e7490"], [0.45, color], [1, "#67e8f9"]],
             hovertemplate=f"{label}<extra></extra>",
             lighting=dict(ambient=0.8, diffuse=0.35, specular=0.12, roughness=0.9),
         ))
@@ -185,7 +193,7 @@ def _add_3d_surface(fig, surf):
 
 
 def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_position=None, beam_direction=None, beam_direction_3d=None, aperture_degrees=0.0, beam_length=25.0, ray_count=7, selected_ray_index=None):
-    """Dibuja las geometrías y los historiales reales de los rayos."""
+    """Dibuja geometrías y recorridos analíticos; no calcula ni modifica rebotes."""
     fig = go.Figure()
 
     for surf in surfaces:
