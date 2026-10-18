@@ -232,6 +232,13 @@ if results_current:
         )
         max_dist = float(st.session_state.max_sim_dist)
         step = max(max_dist / 300.0, 0.01)
+        progress_key = f"ray_progress_{mode}_{selected_env}"
+        # Un nuevo cálculo puede tener otra distancia máxima; evita que un valor
+        # de slider conservado de una ejecución anterior quede fuera del rango.
+        if progress_key in st.session_state:
+            st.session_state[progress_key] = min(
+                max(float(st.session_state[progress_key]), 0.0), max_dist
+            )
         progress = st.slider(
             "Recorrido de los rayos",
             min_value=0.0,
@@ -239,7 +246,7 @@ if results_current:
             value=max_dist,
             step=step,
             help="Recorta los historiales analíticos para visualizar progresivamente la propagación.",
-            key="ray_progress",
+            key=progress_key,
         )
         fig = plot_scene(
             st.session_state.surfaces,
