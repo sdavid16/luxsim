@@ -228,6 +228,19 @@ st.markdown(
 
 if st.session_state.validation_error:
     st.warning(st.session_state.validation_error)
+    preview_scene = build_environment(env_id, mode)
+    preview = plot_scene(
+        preview_scene,
+        [],
+        is_3d=(mode == "3D"),
+        source_position=position,
+    )
+    st.plotly_chart(
+        preview,
+        use_container_width=True,
+        config={"displaylogo": False, "scrollZoom": True, "responsive": True},
+        key=f"source_preview_{mode}_{env_id}",
+    )
 elif st.session_state.config_signature != signature:
     st.info("Ajusta la posición para cumplir la región seleccionada.")
 else:
