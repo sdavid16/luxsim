@@ -77,7 +77,7 @@ def _add_2d_surface(fig, surf):
             hovertemplate=f"{label}<extra></extra>", showlegend=False,
         ))
     elif name == "Circle2D":
-        theta = np.linspace(0, 2 * np.pi, 240)
+        theta = np.linspace(0, 2 * np.pi, 180)
         x = surf.center[0] + surf.radius * np.cos(theta)
         y = surf.center[1] + surf.radius * np.sin(theta)
         fig.add_trace(go.Scatter(
@@ -87,7 +87,7 @@ def _add_2d_surface(fig, surf):
             hovertemplate=f"{label}<extra></extra>",
         ))
     elif name == "Ellipse2D":
-        theta = np.linspace(0, 2 * np.pi, 240)
+        theta = np.linspace(0, 2 * np.pi, 180)
         x = surf.center[0] + surf.rx * np.cos(theta)
         y = surf.center[1] + surf.ry * np.sin(theta)
         fig.add_trace(go.Scatter(
@@ -104,8 +104,8 @@ def _add_3d_surface(fig, surf):
     label = _surface_label(surf)
 
     if name == "CylinderWall3D":
-        theta = np.linspace(0, 2 * np.pi, 64)
-        z = np.linspace(surf.cb[2], surf.cb[2] + surf.h, 12)
+        theta = np.linspace(0, 2 * np.pi, 48)
+        z = np.linspace(surf.cb[2], surf.cb[2] + surf.h, 8)
         th, zz = np.meshgrid(theta, z)
         x = surf.cb[0] + surf.r * np.cos(th)
         y = surf.cb[1] + surf.r * np.sin(th)
@@ -116,8 +116,8 @@ def _add_3d_surface(fig, surf):
             lighting=dict(ambient=0.8, diffuse=0.35, specular=0.12, roughness=0.9),
         ))
     elif name == "Disk3D":
-        theta = np.linspace(0, 2 * np.pi, 72)
-        radii = np.linspace(0, surf.radius, 14)
+        theta = np.linspace(0, 2 * np.pi, 40)
+        radii = np.linspace(0, surf.radius, 10)
         rr, tt = np.meshgrid(radii, theta)
         normal = np.asarray(surf.normal, dtype=float)
         reference = np.array([1., 0., 0.]) if abs(normal[0]) < 0.9 else np.array([0., 1., 0.])
@@ -133,22 +133,23 @@ def _add_3d_surface(fig, surf):
             hovertemplate=f"{label}<extra></extra>",
         ))
     elif name == "Ellipsoid3D":
-        u = np.linspace(0, 2 * np.pi, 48)
-        v = np.linspace(0, np.pi, 28)
+        # Igualar rx, ry y rz produce una esfera; la misma malla sirve para ambas.
+        u = np.linspace(0, 2 * np.pi, 32)
+        v = np.linspace(0, np.pi, 20)
         uu, vv = np.meshgrid(u, v)
         x = surf.center[0] + surf.rx * np.cos(uu) * np.sin(vv)
         y = surf.center[1] + surf.ry * np.sin(uu) * np.sin(vv)
         z = surf.center[2] + surf.rz * np.cos(vv)
         fig.add_trace(go.Surface(
-            x=x, y=y, z=z, name=label, showscale=False,
-            opacity=0.16, colorscale=[[0, color], [1, color]],
+            x=x, y=y, z=z, name="Esfera" if np.isclose(surf.rx, surf.ry) and np.isclose(surf.ry, surf.rz) else label,
+            showscale=False, opacity=0.16, colorscale=[[0, color], [1, color]],
             hovertemplate=f"{label}<extra></extra>",
             lighting=dict(ambient=0.8, diffuse=0.4, specular=0.1, roughness=0.9),
         ))
 
 
 def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf")):
-    """Dibuja las geometrías implementadas y los historiales reales de los rayos."""
+    """Dibuja las geometrías y los historiales reales de los rayos."""
     fig = go.Figure()
 
     for surf in surfaces:
@@ -212,7 +213,6 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf")):
                 hovertemplate="Fuente luminosa<extra></extra>",
             ))
 
-    # Trazas ficticias transparentes para una leyenda consistente incluso con superficies 3D.
     present_types = {surf.type for surf in surfaces}
     legend_items = [
         ("PARED", WALL, "Superficie"),
