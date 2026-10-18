@@ -3,7 +3,7 @@ import time
 import numpy as np
 import streamlit as st
 from core.ray import RayState
-from core.surfaces import PolygonPlane3D, Segment2D, SurfaceType
+from core.surfaces import Segment2D, SurfaceType
 from environments.scenes import EnvironmentLibrary
 from simulation.engine import run_simulation
 from simulation.source import Source2D, Source3D
@@ -19,29 +19,31 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-      :root { --ink:#17283f; --muted:#64748b; --line:#e2e8f0; --accent:#0f766e; }
-      .stApp { background:#f5f8fc; color:var(--ink); }
-      .block-container { max-width:1580px; padding-top:1.1rem; padding-bottom:2rem; }
-      [data-testid="stSidebar"] { background:#fff; border-right:1px solid var(--line); }
+      :root { --ink:#e5eefc; --muted:#9fb2cc; --line:#263750; --accent:#38bdf8; }
+      .stApp { background:radial-gradient(ellipse at 70% 0%,#142b49 0%,#08111f 58%); color:var(--ink); }
+      .block-container { max-width:1700px; padding-top:1rem; padding-bottom:1.5rem; }
+      [data-testid="stSidebar"] { background:#0b1728; border-right:1px solid #233650; }
+      [data-testid="stSidebar"] * { color:#dce8f8; }
       .lux-brand { display:flex; align-items:center; gap:.7rem; margin-bottom:.35rem; }
-      .lux-mark { display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg,#0f766e,#14b8a6); color:white; font-size:22px; font-weight:800; }
-      .lux-title { font-size:1.9rem; font-weight:800; letter-spacing:-.05em; color:var(--ink); line-height:1.1; }
+      .lux-mark { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:14px; background:linear-gradient(135deg,#06b6d4,#6366f1 55%,#a855f7); color:white; font-size:24px; font-weight:800; box-shadow:0 0 26px #06b6d455; }
+      .lux-title { font-size:2.15rem; font-weight:850; letter-spacing:-.05em; color:#f8fbff; line-height:1.1; }
       .lux-subtitle { color:var(--muted); font-size:.96rem; margin:.35rem 0 1rem; }
-      .lux-eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.13em; font-size:.7rem; font-weight:800; }
-      .lux-section { font-size:1.08rem; font-weight:750; color:var(--ink); margin:.15rem 0; }
-      div[data-testid="stMetric"] { background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 14px; }
-      .stButton > button { border-radius:10px; font-weight:650; }
-      .stButton > button[kind="primary"] { background:#0f766e; border:0; }
-      hr { border-color:var(--line); }
+      .lux-eyebrow { color:#67e8f9; text-transform:uppercase; letter-spacing:.16em; font-size:.7rem; font-weight:800; }
+      .lux-section { font-size:1.08rem; font-weight:750; color:#e8f2ff; margin:.15rem 0; }
+      div[data-testid="stMetric"] { background:#101f33; border:1px solid #29405e; border-radius:14px; padding:10px 14px; }
+      div[data-testid="stMetric"] label, div[data-testid="stMetric"] [data-testid="stMetricValue"] { color:#e8f2ff; }
+      .stButton > button { border-radius:11px; font-weight:700; border:1px solid #36506f; }
+      .stButton > button[kind="primary"] { background:linear-gradient(100deg,#0891b2,#6366f1); border:0; color:white; box-shadow:0 5px 20px #0891b233; }
+      div[data-baseweb="select"] > div, div[data-baseweb="input"] > div { background:#101f33; }
+      hr { border-color:#263750; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-ENVIRONMENTS_2D = {"A": "Circunferencia", "B": "Rectángulo", "C": "Elipse", "D": "Triángulo"}
-ENVIRONMENTS_3D = {"A": "Cilindro", "B": "Esfera", "C": "Elipsoide", "D": "Cubo", "E": "Pirámide"}
-RAYS_2D = 7
-RAYS_3D = 19
+ENVIRONMENTS_2D = {"A": "Circunferencia", "B": "Elipse", "C": "Recta reflectante"}
+ENVIRONMENTS_3D = {"A": "Cilindro", "B": "Esfera", "C": "Elipsoide"}
+MAX_RAYS = 10
 MAX_BOUNCES = 12
 
 
@@ -53,30 +55,17 @@ def build_environment(env_id, mode):
             scene = EnvironmentLibrary.get_env_C_ellipsoid(5, 5, 5, 1.0, 2)
         elif env_id == "C":
             scene = EnvironmentLibrary.get_env_C_ellipsoid(6, 4, 8, 1.0, 2)
-        elif env_id == "D":
-            v = np.array([[-4,-4,0],[4,-4,0],[4,4,0],[-4,4,0],[-4,-4,8],[4,-4,8],[4,4,8],[-4,4,8]], dtype=float)
-            faces = [[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]
-            scene = [PolygonPlane3D(v[face], 1.0) for face in faces]
-        elif env_id == "E":
-            base = np.array([[-5,-5,0],[5,-5,0],[5,5,0],[-5,5,0]], dtype=float)
-            apex = np.array([0,0,8], dtype=float)
-            scene = [PolygonPlane3D(base, 1.0)] + [PolygonPlane3D([base[i], base[(i+1)%4], apex], 1.0) for i in range(4)]
         else:
             raise ValueError("Escena 3D no disponible.")
     else:
         if env_id == "A":
             scene = EnvironmentLibrary.get_env_A_circular(5, 1.0, 3)
         elif env_id == "B":
-            scene = EnvironmentLibrary.get_env_B_rectangular(10, 10, 1.0, 3.5)
-        elif env_id == "C":
             scene = EnvironmentLibrary.get_env_C_elliptical(6, 4, 1.0, 2.5)
-        elif env_id == "D":
-            vertices = [(-5,-4), (5,-4), (0,5)]
-            scene = [Segment2D(vertices[i], vertices[(i+1)%3], 1.0) for i in range(3)]
+        elif env_id == "C":
+            scene = [Segment2D([-8.0, 0.0], [8.0, 0.0], 1.0)]
         else:
             raise ValueError("Escena 2D no disponible.")
-
-    # Esta versión estudia propagación y rebotes; no hay pantalla receptora.
     return [surface for surface in scene if surface.type != SurfaceType.RECEIVER]
 
 
@@ -86,23 +75,15 @@ def is_inside_figure(env_id, mode, position):
         if env_id == "A":
             return x * x + y * y < 25.0 - 1e-8
         if env_id == "B":
-            return abs(x) < 5.0 - 1e-8 and abs(y) < 5.0 - 1e-8
-        if env_id == "C":
             return (x / 6.0) ** 2 + (y / 4.0) ** 2 < 1.0 - 1e-8
-        if env_id == "D":
-            return y > -4.0 + 1e-8 and y < 5.0 - 1e-8 and abs(x) < 5.0*(5.0-y)/9.0 - 1e-8
-    else:
-        z = position[2]
-        if env_id == "A":
-            return x * x + y * y < 25.0 - 1e-8 and 1e-8 < z < 10.0 - 1e-8
-        if env_id == "B":
-            return x * x + y * y + z * z < 25.0 - 1e-8
-        if env_id == "C":
-            return (x / 6.0) ** 2 + (y / 4.0) ** 2 + (z / 8.0) ** 2 < 1.0 - 1e-8
-        if env_id == "D":
-            return abs(x) < 4.0 - 1e-8 and abs(y) < 4.0 - 1e-8 and 1e-8 < z < 8.0 - 1e-8
-        if env_id == "E":
-            return 1e-8 < z < 8.0 - 1e-8 and abs(x) < 5.0*(1.0-z/8.0)-1e-8 and abs(y) < 5.0*(1.0-z/8.0)-1e-8
+        return False
+    z = position[2]
+    if env_id == "A":
+        return x * x + y * y < 25.0 - 1e-8 and 1e-8 < z < 10.0 - 1e-8
+    if env_id == "B":
+        return x * x + y * y + z * z < 25.0 - 1e-8
+    if env_id == "C":
+        return (x / 6.0) ** 2 + (y / 4.0) ** 2 + (z / 8.0) ** 2 < 1.0 - 1e-8
     return False
 
 
@@ -122,14 +103,11 @@ def build_source(mode, position, angle_2d, azimuth_3d, elevation_3d, aperture, r
 
 FORMULAS = {
     ("2D", "A"): ("Circunferencia", r"(x-h)^2+(y-k)^2=r^2"),
-    ("2D", "B"): ("Rectángulo: cuatro segmentos", r"\mathbf{p}(u)=\mathbf{a}+u(\mathbf{b}-\mathbf{a}),\quad 0\leq u\leq1"),
-    ("2D", "C"): ("Elipse", r"\frac{(x-h)^2}{a^2}+\frac{(y-k)^2}{b^2}=1"),
-    ("2D", "D"): ("Triángulo: tres segmentos", r"\mathbf{p}(t)=\mathbf{a}+t(\mathbf{b}-\mathbf{a}),\quad 0\leq t\leq1"),
-    ("3D", "A"): ("Superficie cilíndrica", r"(x-h)^2+(y-k)^2=r^2,\quad z_{\min}\leq z\leq z_{\max}"),
+    ("2D", "B"): ("Elipse", r"\frac{(x-h)^2}{a^2}+\frac{(y-k)^2}{b^2}=1"),
+    ("2D", "C"): ("Recta reflectante", r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d}"),
+    ("3D", "A"): ("Cilindro", r"(x-h)^2+(y-k)^2=r^2,\quad z_{\min}\leq z\leq z_{\max}"),
     ("3D", "B"): ("Esfera", r"(x-h)^2+(y-k)^2+(z-l)^2=r^2"),
     ("3D", "C"): ("Elipsoide", r"\frac{(x-h)^2}{a^2}+\frac{(y-k)^2}{b^2}+\frac{(z-l)^2}{c^2}=1"),
-    ("3D", "D"): ("Cubo: seis caras planas", r"x,y\in[-4,4],\quad z\in[0,8]"),
-    ("3D", "E"): ("Pirámide de base cuadrada", r"z=0,\quad |x|,|y|\leq5(1-z/8)"),
 }
 
 
@@ -189,7 +167,6 @@ with st.sidebar:
             ["Dentro de la figura", "Fuera de la figura"],
             horizontal=False,
             key=f"source_region_{mode}",
-            help="La simulación comprueba esta condición y avisa si la posición no corresponde.",
         )
         if mode == "2D":
             source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_2d")
@@ -208,11 +185,11 @@ with st.sidebar:
             aperture = st.slider("Apertura del cono (°)", 0, 140, 100, 5, key="aperture_3d")
             angle_2d = 90
     
-        ray_max = 25 if mode == "2D" else 37
-        ray_default = 7 if mode == "2D" else 19
+        ray_max = MAX_RAYS
+        ray_default = 7
         ray_key = "ray_count_2d" if mode == "2D" else "ray_count_3d"
-        ray_count = st.slider("Rayos emitidos", 1, ray_max, ray_default, 2, key=ray_key, help="Un rayo representa un láser; varios, una linterna.")
-        max_distance = st.slider("Alcance máximo (unidades)", 5, 30, 15, 5, key="max_ray_distance", help="Distancia total máxima por rayo, incluidos los rebotes.")
+        ray_count = st.slider("Rayos emitidos", 1, ray_max, ray_default, 1, key=ray_key)
+        max_distance = st.slider("Alcance máximo (unidades)", 5, 30, 15, 5, key="max_ray_distance")
         submitted = st.form_submit_button("Aplicar parámetros y simular", type="primary", use_container_width=True)
 
 if submitted:
@@ -220,11 +197,11 @@ if submitted:
 
 signature = (mode, env_id, source_region, tuple(position), angle_2d, azimuth_3d, elevation_3d, aperture, ray_count, max_distance)
 inside = is_inside_figure(env_id, mode, position)
-placement_ok = inside if source_region == "Dentro de la figura" else not inside
+placement_ok = (mode == "2D" and env_id == "C") or (inside if source_region == "Dentro de la figura" else not inside)
 
 # Al cambiar posición, orientación o escena se recalcula automáticamente.
 # Así la fuente puede desplazarse sin tener que iniciar de nuevo manualmente.
-if st.session_state.has_applied_config and signature != st.session_state.config_signature:
+if submitted and signature != st.session_state.config_signature:
     if placement_ok:
         try:
             scene = build_environment(env_id, mode)
@@ -252,14 +229,12 @@ if st.session_state.has_applied_config and signature != st.session_state.config_
         )
 
 st.markdown(
-    '<div class="lux-eyebrow">Geometría analítica aplicada a simulación</div>'
-    '<div class="lux-title">LUXSIM <span style="color:#0f766e;">/</span> Propagación y rebote</div>'
-    '<div class="lux-subtitle">Observa cómo una emisión se propaga y rebota en una superficie geométrica. Cambia la posición y la dirección de la fuente para explorar distintas trayectorias.</div>',
+    '<div class="lux-eyebrow">GEOMETRÍA ANALÍTICA · TRAZADO DE RAYOS</div>'
+    '<div class="lux-title">LUXSIM <span style="color:#38bdf8;">/</span> Propagación y rebote</div>',
     unsafe_allow_html=True,
 )
 
 if not st.session_state.has_applied_config:
-    st.info("Configura la escena y pulsa **Aplicar parámetros y simular** para ejecutar el trazado.")
     preview_scene = build_environment(env_id, mode)
     preview = plot_scene(preview_scene, [], is_3d=(mode == "3D"), source_position=position,
         beam_direction=(np.cos(np.radians(angle_2d)), np.sin(np.radians(angle_2d))) if mode == "2D" else None,
@@ -267,7 +242,7 @@ if not st.session_state.has_applied_config:
         aperture_degrees=aperture, beam_length=float(max_distance), ray_count=ray_count)
     st.plotly_chart(preview, use_container_width=True, config={"displaylogo": False, "scrollZoom": True, "responsive": True})
 elif st.session_state.validation_error:
-    st.warning(st.session_state.validation_error)
+    st.error(st.session_state.validation_error)
     preview_scene = build_environment(env_id, mode)
     preview = plot_scene(
         preview_scene,
@@ -275,6 +250,7 @@ elif st.session_state.validation_error:
         is_3d=(mode == "3D"),
         source_position=position,
         beam_direction=(np.cos(np.radians(angle_2d)), np.sin(np.radians(angle_2d))) if mode == "2D" else None,
+        beam_direction_3d=(np.cos(np.radians(elevation_3d)) * np.cos(np.radians(azimuth_3d)), np.cos(np.radians(elevation_3d)) * np.sin(np.radians(azimuth_3d)), np.sin(np.radians(elevation_3d))) if mode == "3D" else None,
         aperture_degrees=aperture, beam_length=float(max_distance), ray_count=ray_count,
     )
     st.plotly_chart(
@@ -283,8 +259,6 @@ elif st.session_state.validation_error:
         config={"displaylogo": False, "scrollZoom": True, "responsive": True},
         key=f"source_preview_{mode}_{env_id}",
     )
-elif st.session_state.config_signature != signature:
-    st.info("Ajusta la posición para cumplir la región seleccionada.")
 else:
     rays = st.session_state.rays
     metrics = st.session_state.metrics
@@ -321,7 +295,6 @@ else:
             value=5.0,
             step=0.5,
             key="animation_speed_fragment",
-            help="Cambia la velocidad sin reconstruir toda la página.",
         )
         controls[3].caption(f"Velocidad de propagación: {speed:.1f} unidades/s")
 
@@ -355,8 +328,7 @@ else:
             config={"displaylogo": False, "scrollZoom": True, "responsive": True},
             key=f"scene_plot_{mode}_{env_id}",
         )
-        st.caption(f"Distancia recorrida: {progress:.1f} / {st.session_state.max_sim_dist:.1f} unidades geométricas")
-
+    
     animated_scene()
 
     with st.expander("Conceptos y fórmulas", expanded=False):
