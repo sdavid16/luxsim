@@ -1,12 +1,12 @@
 from core.intersections import trace_ray
 from core.ray import RayState
 
-def run_simulation(source, surfaces, max_bounces=50, epsilon=1e-7):
+def run_simulation(source, surfaces, max_bounces=50, epsilon=1e-7, max_distance=40.0):
     rays = source.generate_rays()
     
     for ray in rays:
         ray.max_bounces = max_bounces
-        trace_ray(ray, surfaces, epsilon)
+        trace_ray(ray, surfaces, epsilon, max_distance=max_distance)
         
     # Balance Termodinámico Estricto
     e_emitida = source.total_energy

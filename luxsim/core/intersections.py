@@ -57,7 +57,16 @@ def step_ray(ray, surfaces, epsilon=1e-7):
     else:
         ray.record_state(hit_point, RayState.ACTIVE)
 
-def trace_ray(ray, surfaces, epsilon=1e-7):
-    """Ejecuta el trazado completo del rayo hasta que deja de estar ACTIVO."""
+def trace_ray(ray, surfaces, epsilon=1e-7, max_distance=40.0):
+    """Traza el rayo y limita la distancia total recorrida para mantener la vista acotada."""
     while ray.state == RayState.ACTIVE:
+        remaining = max_distance - ray.cumulative_distance
+        if remaining <= epsilon:
+            ray.record_state(ray.origin.copy(), RayState.ESCAPED)
+            break
+        t, surface, _ = calculate_closest_intersection(ray, surfaces, epsilon)
+        if surface is None or t > remaining:
+            endpoint = ray.origin + ray.direction * remaining
+            ray.record_state(endpoint, RayState.ESCAPED)
+            break
         step_ray(ray, surfaces, epsilon)

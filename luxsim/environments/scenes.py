@@ -1,4 +1,4 @@
-from core.surfaces import Segment2D, Circle2D, RectangularPlane3D, CylinderWall3D, Disk3D, Ellipse2D, Ellipsoid3D, SurfaceType
+from core.surfaces import Segment2D, Circle2D, RectangularPlane3D, CylinderWall3D, Disk3D, Ellipse2D, Ellipsoid3D, PolygonPlane3D, SurfaceType
 
 class EnvironmentLibrary:
     @staticmethod

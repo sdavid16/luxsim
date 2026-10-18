@@ -3,7 +3,7 @@ import time
 import numpy as np
 import streamlit as st
 from core.ray import RayState
-from core.surfaces import SurfaceType
+from core.surfaces import PolygonPlane3D, Segment2D, SurfaceType
 from environments.scenes import EnvironmentLibrary
 from simulation.engine import run_simulation
 from simulation.source import Source2D, Source3D
@@ -38,8 +38,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-ENVIRONMENTS_2D = {"A": "Circunferencia", "B": "Rectángulo", "C": "Elipse"}
-ENVIRONMENTS_3D = {"A": "Cilindro", "B": "Esfera", "C": "Elipsoide"}
+ENVIRONMENTS_2D = {"A": "Circunferencia", "B": "Rectángulo", "C": "Elipse", "D": "Triángulo"}
+ENVIRONMENTS_3D = {"A": "Cilindro", "B": "Esfera", "C": "Elipsoide", "D": "Cubo", "E": "Pirámide"}
 RAYS_2D = 7
 RAYS_3D = 19
 MAX_BOUNCES = 12
@@ -53,6 +53,14 @@ def build_environment(env_id, mode):
             scene = EnvironmentLibrary.get_env_C_ellipsoid(5, 5, 5, 1.0, 2)
         elif env_id == "C":
             scene = EnvironmentLibrary.get_env_C_ellipsoid(6, 4, 8, 1.0, 2)
+        elif env_id == "D":
+            v = np.array([[-4,-4,0],[4,-4,0],[4,4,0],[-4,4,0],[-4,-4,8],[4,-4,8],[4,4,8],[-4,4,8]], dtype=float)
+            faces = [[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]
+            scene = [PolygonPlane3D(v[face], 1.0) for face in faces]
+        elif env_id == "E":
+            base = np.array([[-5,-5,0],[5,-5,0],[5,5,0],[-5,5,0]], dtype=float)
+            apex = np.array([0,0,8], dtype=float)
+            scene = [PolygonPlane3D(base, 1.0)] + [PolygonPlane3D([base[i], base[(i+1)%4], apex], 1.0) for i in range(4)]
         else:
             raise ValueError("Escena 3D no disponible.")
     else:
@@ -62,6 +70,9 @@ def build_environment(env_id, mode):
             scene = EnvironmentLibrary.get_env_B_rectangular(10, 10, 1.0, 3.5)
         elif env_id == "C":
             scene = EnvironmentLibrary.get_env_C_elliptical(6, 4, 1.0, 2.5)
+        elif env_id == "D":
+            vertices = [(-5,-4), (5,-4), (0,5)]
+            scene = [Segment2D(vertices[i], vertices[(i+1)%3], 1.0) for i in range(3)]
         else:
             raise ValueError("Escena 2D no disponible.")
 
@@ -78,6 +89,8 @@ def is_inside_figure(env_id, mode, position):
             return abs(x) < 5.0 - 1e-8 and abs(y) < 5.0 - 1e-8
         if env_id == "C":
             return (x / 6.0) ** 2 + (y / 4.0) ** 2 < 1.0 - 1e-8
+        if env_id == "D":
+            return y > -4.0 + 1e-8 and y < 5.0 - 1e-8 and abs(x) < 5.0*(5.0-y)/9.0 - 1e-8
     else:
         z = position[2]
         if env_id == "A":
@@ -86,12 +99,16 @@ def is_inside_figure(env_id, mode, position):
             return x * x + y * y + z * z < 25.0 - 1e-8
         if env_id == "C":
             return (x / 6.0) ** 2 + (y / 4.0) ** 2 + (z / 8.0) ** 2 < 1.0 - 1e-8
+        if env_id == "D":
+            return abs(x) < 4.0 - 1e-8 and abs(y) < 4.0 - 1e-8 and 1e-8 < z < 8.0 - 1e-8
+        if env_id == "E":
+            return 1e-8 < z < 8.0 - 1e-8 and abs(x) < 5.0*(1.0-z/8.0)-1e-8 and abs(y) < 5.0*(1.0-z/8.0)-1e-8
     return False
 
 
-def build_source(mode, position, angle_2d, azimuth_3d, elevation_3d, aperture):
+def build_source(mode, position, angle_2d, azimuth_3d, elevation_3d, aperture, ray_count):
     if mode == "2D":
-        return Source2D(position[:2], angle_2d, aperture, RAYS_2D, 1000.0)
+        return Source2D(position[:2], angle_2d, aperture, ray_count, 1000.0)
 
     azimuth = np.radians(azimuth_3d)
     elevation = np.radians(elevation_3d)
@@ -100,16 +117,19 @@ def build_source(mode, position, angle_2d, azimuth_3d, elevation_3d, aperture):
         np.cos(elevation) * np.sin(azimuth),
         np.sin(elevation),
     ]
-    return Source3D(position[:3], direction, aperture, RAYS_3D, 1000.0)
+    return Source3D(position[:3], direction, aperture, ray_count, 1000.0)
 
 
 FORMULAS = {
     ("2D", "A"): ("Circunferencia", r"(x-h)^2+(y-k)^2=r^2"),
     ("2D", "B"): ("Rectángulo: cuatro segmentos", r"\mathbf{p}(u)=\mathbf{a}+u(\mathbf{b}-\mathbf{a}),\quad 0\leq u\leq1"),
     ("2D", "C"): ("Elipse", r"\frac{(x-h)^2}{a^2}+\frac{(y-k)^2}{b^2}=1"),
+    ("2D", "D"): ("Triángulo: tres segmentos", r"\mathbf{p}(t)=\mathbf{a}+t(\mathbf{b}-\mathbf{a}),\quad 0\leq t\leq1"),
     ("3D", "A"): ("Superficie cilíndrica", r"(x-h)^2+(y-k)^2=r^2,\quad z_{\min}\leq z\leq z_{\max}"),
     ("3D", "B"): ("Esfera", r"(x-h)^2+(y-k)^2+(z-l)^2=r^2"),
     ("3D", "C"): ("Elipsoide", r"\frac{(x-h)^2}{a^2}+\frac{(y-k)^2}{b^2}+\frac{(z-l)^2}{c^2}=1"),
+    ("3D", "D"): ("Cubo: seis caras planas", r"x,y\in[-4,4],\quad z\in[0,8]"),
+    ("3D", "E"): ("Pirámide de base cuadrada", r"z=0,\quad |x|,|y|\leq5(1-z/8)"),
 }
 
 
@@ -148,6 +168,7 @@ if "config_signature" not in st.session_state:
         "animation_playing": False,
         "animation_last_tick": time.monotonic(),
         "validation_error": None,
+        "has_applied_config": False,
     })
 
 with st.sidebar:
@@ -157,48 +178,59 @@ with st.sidebar:
     )
     st.divider()
     st.markdown("**1 · Escena**")
-    mode = st.radio("Dimensión", ["2D", "3D"], horizontal=True, key="ui_mode")
-    options = ENVIRONMENTS_2D if mode == "2D" else ENVIRONMENTS_3D
-    env_id = st.selectbox("Figura", list(options), format_func=lambda key: options[key], key=f"scene_{mode}")
+    with st.form("simulation_settings", border=False):
+        mode = st.radio("Dimensión", ["2D", "3D"], horizontal=True, key="ui_mode")
+        options = ENVIRONMENTS_2D if mode == "2D" else ENVIRONMENTS_3D
+        env_id = st.selectbox("Figura", list(options), format_func=lambda key: options[key], key=f"scene_{mode}")
+    
+        st.markdown("**2 · Ubicación de la fuente**")
+        source_region = st.radio(
+            "La fuente estará",
+            ["Dentro de la figura", "Fuera de la figura"],
+            horizontal=False,
+            key=f"source_region_{mode}",
+            help="La simulación comprueba esta condición y avisa si la posición no corresponde.",
+        )
+        if mode == "2D":
+            source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_2d")
+            source_y = st.slider("Coordenada Y", -8.0, 8.0, 0.0, 0.5, key="source_y_2d")
+            position = [source_x, source_y]
+            angle_2d = st.slider("Dirección central (°)", 0, 355, 90, 5, key="angle_2d")
+            aperture = st.slider("Apertura angular (°)", 0, 100, 50, 5, key="aperture_2d")
+            azimuth_3d, elevation_3d = 30, 55
+        else:
+            source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_3d")
+            source_y = st.slider("Coordenada Y", -8.0, 8.0, 0.0, 0.5, key="source_y_3d")
+            source_z = st.slider("Coordenada Z", -3.0, 13.0, 1.0, 0.5, key="source_z_3d")
+            position = [source_x, source_y, source_z]
+            azimuth_3d = st.slider("Azimut (°)", 0, 355, 30, 5, key="azimuth_3d")
+            elevation_3d = st.slider("Elevación (°)", -85, 85, 25, 5, key="elevation_3d")
+            aperture = st.slider("Apertura del cono (°)", 0, 140, 100, 5, key="aperture_3d")
+            angle_2d = 90
+    
+        ray_max = 25 if mode == "2D" else 37
+        ray_default = 7 if mode == "2D" else 19
+        ray_key = "ray_count_2d" if mode == "2D" else "ray_count_3d"
+        ray_count = st.slider("Rayos emitidos", 1, ray_max, ray_default, 2, key=ray_key, help="Un rayo representa un láser; varios, una linterna.")
+        max_distance = st.slider("Alcance máximo (unidades)", 5, 30, 15, 5, key="max_ray_distance", help="Distancia total máxima por rayo, incluidos los rebotes.")
+        submitted = st.form_submit_button("Aplicar parámetros y simular", type="primary", use_container_width=True)
 
-    st.markdown("**2 · Ubicación de la fuente**")
-    source_region = st.radio(
-        "La fuente estará",
-        ["Dentro de la figura", "Fuera de la figura"],
-        horizontal=False,
-        key=f"source_region_{mode}",
-        help="La simulación comprueba esta condición y avisa si la posición no corresponde.",
-    )
-    if mode == "2D":
-        source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_2d")
-        source_y = st.slider("Coordenada Y", -8.0, 8.0, 0.0, 0.5, key="source_y_2d")
-        position = [source_x, source_y]
-        angle_2d = st.slider("Dirección central (°)", 0, 355, 90, 5, key="angle_2d")
-        aperture = st.slider("Apertura angular (°)", 0, 100, 50, 5, key="aperture_2d")
-        azimuth_3d, elevation_3d = 30, 55
-    else:
-        source_x = st.slider("Coordenada X", -8.0, 8.0, 0.0, 0.5, key="source_x_3d")
-        source_y = st.slider("Coordenada Y", -8.0, 8.0, 0.0, 0.5, key="source_y_3d")
-        source_z = st.slider("Coordenada Z", -3.0, 13.0, 1.0, 0.5, key="source_z_3d")
-        position = [source_x, source_y, source_z]
-        azimuth_3d = st.slider("Azimut (°)", 0, 355, 30, 5, key="azimuth_3d")
-        elevation_3d = st.slider("Elevación (°)", -85, 85, 25, 5, key="elevation_3d")
-        aperture = st.slider("Apertura del cono (°)", 0, 140, 100, 5, key="aperture_3d")
-        angle_2d = 90
+if submitted:
+    st.session_state.has_applied_config = True
 
-signature = (mode, env_id, source_region, tuple(position), angle_2d, azimuth_3d, elevation_3d, aperture)
+signature = (mode, env_id, source_region, tuple(position), angle_2d, azimuth_3d, elevation_3d, aperture, ray_count, max_distance)
 inside = is_inside_figure(env_id, mode, position)
 placement_ok = inside if source_region == "Dentro de la figura" else not inside
 
 # Al cambiar posición, orientación o escena se recalcula automáticamente.
 # Así la fuente puede desplazarse sin tener que iniciar de nuevo manualmente.
-if signature != st.session_state.config_signature:
+if st.session_state.has_applied_config and signature != st.session_state.config_signature:
     if placement_ok:
         try:
             scene = build_environment(env_id, mode)
-            source = build_source(mode, position, angle_2d, azimuth_3d, elevation_3d, aperture)
-            rays, metrics = run_simulation(source, scene, MAX_BOUNCES)
-            max_dist = max((float(ray.cumulative_distance) for ray in rays), default=1.0)
+            source = build_source(mode, position, angle_2d, azimuth_3d, elevation_3d, aperture, ray_count)
+            rays, metrics = run_simulation(source, scene, MAX_BOUNCES, max_distance=float(max_distance))
+            max_dist = float(max_distance)
             st.session_state.update({
                 "rays": rays,
                 "metrics": metrics,
@@ -226,7 +258,15 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-if st.session_state.validation_error:
+if not st.session_state.has_applied_config:
+    st.info("Configura la escena y pulsa **Aplicar parámetros y simular** para ejecutar el trazado.")
+    preview_scene = build_environment(env_id, mode)
+    preview = plot_scene(preview_scene, [], is_3d=(mode == "3D"), source_position=position,
+        beam_direction=(np.cos(np.radians(angle_2d)), np.sin(np.radians(angle_2d))) if mode == "2D" else None,
+        beam_direction_3d=(np.cos(np.radians(elevation_3d)) * np.cos(np.radians(azimuth_3d)), np.cos(np.radians(elevation_3d)) * np.sin(np.radians(azimuth_3d)), np.sin(np.radians(elevation_3d))) if mode == "3D" else None,
+        aperture_degrees=aperture, beam_length=float(max_distance), ray_count=ray_count)
+    st.plotly_chart(preview, use_container_width=True, config={"displaylogo": False, "scrollZoom": True, "responsive": True})
+elif st.session_state.validation_error:
     st.warning(st.session_state.validation_error)
     preview_scene = build_environment(env_id, mode)
     preview = plot_scene(
@@ -234,6 +274,8 @@ if st.session_state.validation_error:
         [],
         is_3d=(mode == "3D"),
         source_position=position,
+        beam_direction=(np.cos(np.radians(angle_2d)), np.sin(np.radians(angle_2d))) if mode == "2D" else None,
+        aperture_degrees=aperture, beam_length=float(max_distance), ray_count=ray_count,
     )
     st.plotly_chart(
         preview,
@@ -302,6 +344,10 @@ else:
             st.session_state.rays,
             is_3d=(mode == "3D"),
             max_time_dist=progress,
+            source_position=position,
+            beam_direction=(np.cos(np.radians(angle_2d)), np.sin(np.radians(angle_2d))) if mode == "2D" else None,
+            beam_direction_3d=(np.cos(np.radians(elevation_3d)) * np.cos(np.radians(azimuth_3d)), np.cos(np.radians(elevation_3d)) * np.sin(np.radians(azimuth_3d)), np.sin(np.radians(elevation_3d))) if mode == "3D" else None,
+            aperture_degrees=aperture, beam_length=float(max_distance), ray_count=ray_count,
         )
         st.plotly_chart(
             fig,

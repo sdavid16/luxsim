@@ -11,6 +11,9 @@ WALL_FILL = "rgba(148,163,184,0.12)"
 RECEIVER = "#0f9b8e"
 ESCAPE = "#f59e0b"
 RAY_ACTIVE = "#e6a817"
+LASER_GREEN = "#16a34a"
+FLASHLIGHT_YELLOW = "#eab308"
+APERTURE_RED = "#ef4444"
 RAY_CAPTURED = "#0f9b8e"
 RAY_ABSORBED = "#e05252"
 RAY_ESCAPED = "#94a3b8"
@@ -132,6 +135,21 @@ def _add_3d_surface(fig, surf):
             colorscale=[[0, color], [1, color]],
             hovertemplate=f"{label}<extra></extra>",
         ))
+    elif name == "PolygonPlane3D":
+        vertices = np.asarray(surf.vertices, dtype=float)
+        faces = [[0, i, i + 1] for i in range(1, len(vertices) - 1)]
+        ii, jj, kk = zip(*faces)
+        fig.add_trace(go.Mesh3d(
+            x=vertices[:, 0], y=vertices[:, 1], z=vertices[:, 2],
+            i=ii, j=jj, k=kk, name="Cara plana", showscale=False,
+            opacity=0.22, color=color, flatshading=True,
+            hovertemplate="Cara plana<extra></extra>",
+        ))
+        closed = np.vstack([vertices, vertices[0]])
+        fig.add_trace(go.Scatter3d(
+            x=closed[:,0], y=closed[:,1], z=closed[:,2], mode="lines",
+            line=dict(color=color, width=3), showlegend=False, hoverinfo="skip",
+        ))
     elif name == "Ellipsoid3D":
         # Igualar rx, ry y rz produce una esfera; la misma malla sirve para ambas.
         u = np.linspace(0, 2 * np.pi, 32)
@@ -148,7 +166,7 @@ def _add_3d_surface(fig, surf):
         ))
 
 
-def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_position=None):
+def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_position=None, beam_direction=None, beam_direction_3d=None, aperture_degrees=0.0, beam_length=25.0, ray_count=7):
     """Dibuja las geometrías y los historiales reales de los rayos."""
     fig = go.Figure()
 
@@ -163,14 +181,8 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_p
         pts = interpolate_ray_history(ray.history, max_time_dist)
         if len(pts) < 2:
             continue
-        color = get_color(ray.state)
-        label = {
-            RayState.CAPTURED: "Rayo captado",
-            RayState.ABSORBED: "Rayo absorbido",
-            RayState.ESCAPED: "Rayo escapado",
-            RayState.MAX_BOUNCES: "Límite de rebotes",
-            RayState.ACTIVE: "Rayo",
-        }.get(ray.state, "Rayo")
+        color = LASER_GREEN if ray_count == 1 else FLASHLIGHT_YELLOW
+        label = "Láser" if ray_count == 1 else "Linterna"
         grouped.setdefault((color, label), []).append(pts)
 
     for (color, label), paths in grouped.items():
@@ -198,21 +210,72 @@ def plot_scene(surfaces, rays, is_3d=False, max_time_dist=float("inf"), source_p
     origin = origins[0] if origins else (
         np.asarray(source_position, dtype=float) if source_position is not None else None
     )
+    if origin is not None and not is_3d and beam_direction is not None:
+        direction = np.asarray(beam_direction, dtype=float)
+        direction /= max(np.linalg.norm(direction), 1e-12)
+        center_angle = np.arctan2(direction[1], direction[0])
+        half_angle = np.radians(float(aperture_degrees)) / 2.0
+        if ray_count == 1:
+            endpoint = origin[:2] + float(beam_length) * direction
+            fig.add_trace(go.Scatter(
+                x=[origin[0], endpoint[0]], y=[origin[1], endpoint[1]],
+                mode="lines", name="Láser guía",
+                line=dict(color=LASER_GREEN, width=2.5),
+                hovertemplate="Dirección del láser<extra></extra>", showlegend=False,
+            ))
+        else:
+            for angle in (center_angle - half_angle, center_angle + half_angle):
+                endpoint = origin[:2] + float(beam_length) * np.array([np.cos(angle), np.sin(angle)])
+                fig.add_trace(go.Scatter(
+                    x=[origin[0], endpoint[0]], y=[origin[1], endpoint[1]],
+                    mode="lines", name="Límite de apertura",
+                    line=dict(color=APERTURE_RED, width=1.8, dash="dash"),
+                    hovertemplate="Límite de apertura<extra></extra>", showlegend=False,
+                ))
+    if origin is not None and is_3d and beam_direction_3d is not None:
+        direction = np.asarray(beam_direction_3d, dtype=float)
+        direction /= max(np.linalg.norm(direction), 1e-12)
+        half_angle = np.radians(float(aperture_degrees)) / 2.0
+        reference = np.array([0.0, 0.0, 1.0]) if abs(direction[2]) < 0.95 else np.array([1.0, 0.0, 0.0])
+        u = np.cross(direction, reference)
+        u /= max(np.linalg.norm(u), 1e-12)
+        v = np.cross(direction, u)
+        if ray_count == 1:
+            endpoint = origin[:3] + float(beam_length) * direction
+            fig.add_trace(go.Scatter3d(
+                x=[origin[0], endpoint[0]], y=[origin[1], endpoint[1]], z=[origin[2], endpoint[2]],
+                mode="lines", name="Láser guía", line=dict(color=LASER_GREEN, width=4),
+                hoverinfo="skip", showlegend=False,
+            ))
+        else:
+            for phi in np.linspace(0, 2*np.pi, 9)[:-1]:
+                edge_direction = np.cos(half_angle)*direction + np.sin(half_angle)*(np.cos(phi)*u + np.sin(phi)*v)
+                endpoint = origin[:3] + float(beam_length)*edge_direction
+                fig.add_trace(go.Scatter3d(
+                    x=[origin[0], endpoint[0]], y=[origin[1], endpoint[1]], z=[origin[2], endpoint[2]],
+                    mode="lines", name="Límite de apertura",
+                    line=dict(color=APERTURE_RED, width=2, dash="dash"),
+                    hoverinfo="skip", showlegend=False,
+                ))
     if origin is not None:
+        source_color = LASER_GREEN if ray_count == 1 else FLASHLIGHT_YELLOW
+        source_label = "Láser" if ray_count == 1 else "Linterna"
         if is_3d and len(origin) >= 3:
             fig.add_trace(go.Scatter3d(
                 x=[origin[0]], y=[origin[1]], z=[origin[2]],
-                mode="markers", name="Fuente",
-                marker=dict(size=6, color="#f59e0b", symbol="diamond",
+                mode="markers+text", name=source_label, text=[source_label],
+                textposition="top center",
+                marker=dict(size=7, color=source_color, symbol="circle",
                             line=dict(color="#ffffff", width=1)),
-                hovertemplate="Fuente<extra></extra>",
+                hovertemplate=f"{source_label}<extra></extra>",
             ))
         elif not is_3d:
             fig.add_trace(go.Scatter(
-                x=[origin[0]], y=[origin[1]], mode="markers", name="Fuente",
-                marker=dict(size=11, color="#f59e0b", symbol="diamond",
+                x=[origin[0]], y=[origin[1]], mode="markers+text", name=source_label,
+                text=[source_label], textposition="top center",
+                marker=dict(size=10, color=source_color, symbol="circle",
                             line=dict(color="#ffffff", width=1.5)),
-                hovertemplate="Fuente<extra></extra>",
+                hovertemplate=f"{source_label}<extra></extra>",
             ))
 
     present_types = {surf.type for surf in surfaces}
