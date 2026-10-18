@@ -6,15 +6,12 @@ from core.vectors import normalize
 
 class Source2D:
     """Fuente 2D con dirección central y apertura angular uniforme."""
-    def __init__(self, position, angle_center, angle_spread, num_rays, total_energy, seed=None):
+    def __init__(self, position, angle_center, angle_spread, num_rays, total_energy):
         self.position = np.array(position, dtype=float)
         self.angle_center = np.radians(angle_center)
         self.angle_spread = np.radians(angle_spread)
         self.num_rays = num_rays
         self.total_energy = total_energy
-        if seed is not None:
-            np.random.seed(seed)
-
     def generate_rays(self):
         """Distribuye los rayos en el abanico y reparte la energía total."""
         rays = []
@@ -38,15 +35,12 @@ class Source2D:
 
 class Source3D:
     """Fuente 3D con apertura cónica; 360° distribuye rayos por toda la esfera."""
-    def __init__(self, position, dir_vec, angle_spread, num_rays, total_energy, seed=None):
+    def __init__(self, position, dir_vec, angle_spread, num_rays, total_energy):
         self.position = np.array(position, dtype=float)
         self.dir_vec = normalize(np.array(dir_vec, dtype=float))
         self.angle_spread = np.radians(angle_spread)
         self.num_rays = num_rays
         self.total_energy = total_energy
-        if seed is not None:
-            np.random.seed(seed)
-
     def generate_rays(self):
         """Genera direcciones distribuidas en 3D sin cambiar la energía total."""
         rays = []
