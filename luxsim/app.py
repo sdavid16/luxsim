@@ -126,7 +126,7 @@ def show_formulas(mode, env_id, angle_2d, azimuth_3d, elevation_3d):
             st.latex(r"\mathbf{d}=(\cos\varphi\cos\theta,\cos\varphi\sin\theta,\sin\varphi)")
             st.caption(f"Azimut: {azimuth_3d}° · elevación: {elevation_3d}° · d = ({np.cos(np.radians(elevation_3d))*np.cos(np.radians(azimuth_3d)):.3f}, {np.cos(np.radians(elevation_3d))*np.sin(np.radians(azimuth_3d)):.3f}, {np.sin(np.radians(elevation_3d)):.3f})")
         st.latex(r"\mathbf{p}(t)=\mathbf{p}_0+t\mathbf{d},\quad t\geq0")
-        st.caption(f"Fuente actual: P₀ = ({\", \".join(f\"{v:.2f}\" for v in position)}) · alcance = {max_distance} u · rayos = {ray_count} · apertura = {aperture}°")
+        st.caption("Fuente actual: P₀ = (" + ", ".join(f"{v:.2f}" for v in position) + f") · alcance = {max_distance} u · rayos = {ray_count} · apertura = {aperture}°")
     with right:
         st.markdown("**3. Intersección y rebote**")
         st.caption("Se busca el primer punto de la superficie que cumple la ecuación de la trayectoria.")
