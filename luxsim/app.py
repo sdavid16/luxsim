@@ -135,7 +135,7 @@ def show_formulas(mode, env_id, angle_2d, azimuth_3d, elevation_3d, position, ma
         st.latex(r"\mathbf{d}_{\mathrm{salida}}=\mathbf{d}_{\mathrm{entrada}}-2(\mathbf{d}_{\mathrm{entrada}}\cdot\mathbf{n})\mathbf{n}")
         st.caption("Aquí n es la normal unitaria a la superficie en el punto de impacto.")
         st.markdown("**4. Límites de simulación**")
-        st.latex(r"0 \\leq s \\leq L_{\\max}, \\qquad N_{\\mathrm{rebotes}} \\leq N_{\\max}")
+        st.latex(r"0 \leq s \leq L_{\max}, \qquad N_{\mathrm{rebotes}} \leq N_{\max}")
         st.caption(f"Alcance máximo: {max_distance} u · rebotes máximos: {max_bounces} · rayos: {ray_count} · apertura: {aperture}°")
 
 
