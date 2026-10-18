@@ -199,8 +199,7 @@ signature = (mode, env_id, source_region, tuple(position), angle_2d, azimuth_3d,
 inside = is_inside_figure(env_id, mode, position)
 placement_ok = (mode == "2D" and env_id == "C") or (inside if source_region == "Dentro de la figura" else not inside)
 
-# Al cambiar posición, orientación o escena se recalcula automáticamente.
-# Así la fuente puede desplazarse sin tener que iniciar de nuevo manualmente.
+# El trazado solo se recalcula cuando se envía el formulario.
 if submitted:
     if placement_ok:
         try:
@@ -224,9 +223,7 @@ if submitted:
     else:
         st.session_state.config_signature = None
         st.session_state.animation_playing = False
-        st.session_state.validation_error = (
-            "La fuente no está en la región elegida. Ajusta sus coordenadas o cambia entre interior y exterior."
-        )
+        st.session_state.validation_error = "La posición de la fuente no coincide con la región seleccionada."
 
 st.markdown(
     '<div class="lux-eyebrow">GEOMETRÍA ANALÍTICA · TRAZADO DE RAYOS</div>'
