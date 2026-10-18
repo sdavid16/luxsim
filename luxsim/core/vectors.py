@@ -1,3 +1,5 @@
+"""Operaciones vectoriales empleadas por el trazador geométrico."""
+
 import numpy as np
 
 def norm(v):
